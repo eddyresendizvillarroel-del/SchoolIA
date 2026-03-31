@@ -1656,3 +1656,356 @@ body.light-mode .skeleton-tab {
   color: var(--orange);
   border: 1px solid rgba(245, 158, 11, 0.2);
 }
+
+/* ── Slides Button ───────────────────────────────────────────── */
+.btn-slides {
+  color: var(--blue);
+  border-color: rgba(59, 130, 246, 0.25);
+}
+
+.btn-slides:hover:not(:disabled) {
+  color: var(--blue);
+  border-color: var(--blue);
+  background: var(--blue-soft);
+}
+
+/* ── Suggested Topics ────────────────────────────────────────── */
+.suggested-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: -10px;
+}
+
+.topic-pill {
+  padding: 5px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.topic-pill:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* ── Focus Mode ──────────────────────────────────────────────── */
+.focus-active .sidebar,
+.focus-active .sidebar-overlay {
+  display: none !important;
+}
+
+.focus-active .main-content {
+  padding: 48px 80px;
+}
+
+.focus-active .results-header,
+.focus-active .tool-buttons,
+.focus-active .tool-panel,
+.focus-active .word-count-bar,
+.focus-active .btn-expand,
+.focus-active .version-bar,
+.focus-active .action-buttons,
+.focus-active .results-loading {
+  display: none !important;
+}
+
+.focus-active .section-content {
+  max-width: 720px;
+  margin: 0 auto;
+  font-size: 17px;
+  line-height: 2;
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+
+.focus-active .section-content::before {
+  display: none;
+}
+
+.focus-active .section-tabs {
+  max-width: 720px;
+  margin: 0 auto 24px;
+}
+
+.focus-exit {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 100;
+  width: 40px;
+  height: 40px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.focus-exit:hover {
+  color: var(--text);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* ── Version History Bar ─────────────────────────────────────── */
+.version-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 8px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+}
+
+.version-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.version-btn {
+  padding: 4px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.version-btn:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.version-btn.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.version-type {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+/* ── Confetti Canvas ─────────────────────────────────────────── */
+.confetti-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  pointer-events: none;
+  display: none;
+}
+
+/* ── Keyboard Shortcuts Modal ────────────────────────────────── */
+.shortcuts-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 250;
+  animation: fadeIn 0.2s ease;
+}
+
+.shortcuts-content {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px;
+  min-width: 320px;
+  max-width: 420px;
+}
+
+.shortcuts-content h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: var(--text);
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.shortcut-row:last-of-type {
+  border-bottom: none;
+}
+
+.shortcut-row span {
+  margin-left: auto;
+}
+
+kbd {
+  display: inline-block;
+  padding: 3px 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ── Exam ────────────────────────────────────────────────────── */
+.exam-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.exam-timer {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  background: var(--accent-soft);
+  padding: 6px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(16, 163, 127, 0.2);
+}
+
+.exam-question {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.exam-textarea {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  resize: vertical;
+  margin-top: 8px;
+  transition: border-color 0.2s;
+}
+
+.exam-textarea:focus {
+  border-color: var(--accent);
+}
+
+.exam-results {
+  animation: fadeIn 0.3s ease;
+}
+
+.exam-detail {
+  padding: 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 10px;
+}
+
+.exam-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.exam-detail-score {
+  padding: 3px 10px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.exam-detail-score.good {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.exam-detail-score.ok {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--orange);
+}
+
+.exam-detail-score.bad {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--red);
+}
+
+.exam-detail p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* ── Pomodoro Sound Select ───────────────────────────────────── */
+.pomodoro-sound-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.pomodoro-sound-select label {
+  font-weight: 500;
+}
+
+.pomodoro-sound-select select {
+  padding: 6px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+}
+
+/* ── Mobile extras ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .focus-active .main-content {
+    padding: 24px 16px;
+    padding-top: 72px;
+  }
+
+  .focus-active .section-content {
+    font-size: 15px;
+  }
+
+  .shortcuts-content {
+    margin: 16px;
+    min-width: auto;
+  }
+}

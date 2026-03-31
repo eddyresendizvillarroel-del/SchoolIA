@@ -337,6 +337,68 @@ Responde SOLO en formato JSON:
   }
 });
 
+// ── Endpoint: Generar examen ───────────────────────────────────────
+app.post("/api/examen", async (req, res) => {
+  const { tema, texto, numPreguntas } = req.body;
+  if (!tema) return res.status(400).json({ error: "Falta el tema." });
+
+  const n = numPreguntas || 5;
+  const prompt = `Genera un examen de ${n} preguntas abiertas sobre "${tema}" basado en este contenido:
+
+${texto || tema}
+
+Las preguntas deben requerir respuestas desarrolladas (no sí/no). Varía la dificultad.
+Responde SOLO en formato JSON:
+[{"pregunta": "...", "respuesta_esperada": "puntos clave que debería mencionar una buena respuesta"}]`;
+
+  try {
+    const text = await generateText(prompt);
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      const preguntas = JSON.parse(jsonMatch[0]);
+      res.json({ preguntas });
+    } else {
+      res.status(500).json({ error: "Error al generar examen." });
+    }
+  } catch (err) {
+    console.error("Error AI:", err.message);
+    res.status(500).json({ error: "Error al generar examen. Intenta de nuevo." });
+  }
+});
+
+// ── Endpoint: Evaluar examen completo ─────────────────────────────
+app.post("/api/evaluar-examen", async (req, res) => {
+  const { tema, respuestas } = req.body;
+  if (!respuestas || !respuestas.length) return res.status(400).json({ error: "Faltan respuestas." });
+
+  const resumenRespuestas = respuestas.map((r, i) =>
+    `Pregunta ${i + 1}: ${r.pregunta}\nRespuesta esperada: ${r.respuesta_esperada}\nRespuesta del estudiante: ${r.respuesta || "(sin respuesta)"}`
+  ).join("\n\n");
+
+  const prompt = `Eres un profesor evaluando un examen de un estudiante sobre "${tema}".
+
+${resumenRespuestas}
+
+Evalúa cada respuesta y da una calificación general. Responde en JSON:
+{"calificacion_general": (1-10), "detalle": [{"pregunta": 1, "puntaje": (1-10), "comentario": "..."}], "resumen": "feedback general"}
+
+Responde SOLO con el JSON.`;
+
+  try {
+    const text = await generateText(prompt);
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const result = JSON.parse(jsonMatch[0]);
+      res.json(result);
+    } else {
+      res.status(500).json({ error: "Error al evaluar examen." });
+    }
+  } catch (err) {
+    console.error("Error AI:", err.message);
+    res.status(500).json({ error: "Error al evaluar. Intenta de nuevo." });
+  }
+});
+
 // ── Construir prompt estructurado ──────────────────────────────────
 function buildPrompt(tema, nivel, tipo, idioma, personas) {
   const nivelTexto = { facil: "básico y sencillo", medio: "intermedio con buen detalle", dificil: "avanzado y profundo" };
