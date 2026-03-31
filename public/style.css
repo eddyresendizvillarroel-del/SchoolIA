@@ -2132,6 +2132,149 @@ kbd {
   color: var(--text-secondary);
 }
 
+/* ── Upload PDF ──────────────────────────────────────────────── */
+.upload-divider {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-secondary);
+  opacity: 0.5;
+  margin: -8px 0 -10px;
+}
+
+.btn-upload {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: var(--bg-card);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.btn-upload:hover:not(.disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.btn-upload.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Mindmap ─────────────────────────────────────────────────── */
+.mindmap-container {
+  animation: fadeIn 0.3s ease;
+}
+
+.mindmap-render {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 20px;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+}
+
+.mindmap-render svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ── Gamification ────────────────────────────────────────────── */
+.gamification-dashboard {
+  animation: fadeIn 0.3s ease;
+}
+
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.stat-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.stat-card:hover {
+  border-color: var(--accent);
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badges-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.badge-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  opacity: 0.3;
+  filter: grayscale(1);
+  transition: all 0.3s;
+}
+
+.badge-item.earned {
+  opacity: 1;
+  filter: none;
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.badge-icon {
+  font-size: 20px;
+}
+
+.badge-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+@media (max-width: 768px) {
+  .stats-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .badges-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 /* ── Auth ────────────────────────────────────────────────────── */
 .auth-section {
   display: flex;

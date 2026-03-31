@@ -32,6 +32,8 @@
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3/dist/pptxgen.bundle.js"></script>
 </head>
 <body>
   <div id="app" v-cloak>
@@ -144,6 +146,13 @@
             <span class="btn-generar-text">{{ loading ? t('generating') : t('generate') }}</span>
           </button>
           <span class="shortcut-hint">Ctrl + Enter</span>
+
+          <div class="upload-divider">{{ t('orUpload') }}</div>
+          <label class="btn-upload" :class="{ disabled: uploadLoading }">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            {{ uploadLoading ? t('uploadLoading') : t('uploadPdf') }}
+            <input type="file" accept=".pdf" @change="subirPDF" hidden :disabled="uploadLoading">
+          </label>
         </form>
 
         <div v-if="historial.length > 0" class="historial">
@@ -277,6 +286,10 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
                 <span class="btn-label">{{ t('slides') }}</span>
               </button>
+              <button class="btn-action btn-slides" @click="exportarPPTX" :disabled="loading" title="PPTX">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                <span class="btn-label">PPTX</span>
+              </button>
             </div>
           </div>
 
@@ -334,6 +347,14 @@
             <button class="tool-btn" :class="{ active: activePanel === 'collab' }" @click="togglePanel('collab')">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               {{ t('collab') }}
+            </button>
+            <button class="tool-btn" :class="{ active: activePanel === 'mindmap' }" @click="togglePanel('mindmap')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><line x1="12" y1="3" x2="12" y2="9"/><line x1="12" y1="15" x2="12" y2="21"/><line x1="3" y1="12" x2="9" y2="12"/><line x1="15" y1="12" x2="21" y2="12"/></svg>
+              {{ t('mindmap') }}
+            </button>
+            <button v-if="user" class="tool-btn" :class="{ active: activePanel === 'gamification' }" @click="togglePanel('gamification')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              {{ t('gamification') }}
             </button>
           </div>
 
@@ -525,6 +546,53 @@
                 </select>
               </div>
             </div>
+          </div>
+
+          <!-- Mindmap Panel -->
+          <div v-if="activePanel === 'mindmap'" class="tool-panel">
+            <h3>{{ t('mindmapTitle') }}</h3>
+            <button v-if="!mindmapData && !mindmapLoading" class="btn-generar" @click="generarMapaMental" style="margin-bottom:16px">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><line x1="12" y1="3" x2="12" y2="9"/><line x1="12" y1="15" x2="12" y2="21"/></svg>
+              {{ t('mindmapGenerate') }}
+            </button>
+            <div v-if="mindmapLoading" class="panel-loading"><div class="typing-indicator"><span></span><span></span><span></span></div> {{ t('loadingMindmap') }}</div>
+            <div v-if="mindmapData" class="mindmap-container">
+              <div ref="mindmapEl" class="mindmap-render"></div>
+              <button class="btn-generar" @click="mindmapData = null" style="margin-top:12px">{{ t('mindmapRegenerate') }}</button>
+            </div>
+          </div>
+
+          <!-- Gamification Panel -->
+          <div v-if="activePanel === 'gamification'" class="tool-panel">
+            <h3>{{ t('gamificationTitle') }}</h3>
+            <div v-if="userStats" class="gamification-dashboard">
+              <div class="stats-cards">
+                <div class="stat-card">
+                  <div class="stat-value">{{ userStats.points }}</div>
+                  <div class="stat-label">{{ t('gamPoints') }}</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-value">{{ userStats.streak }}</div>
+                  <div class="stat-label">{{ t('gamStreak') }}</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-value">{{ userStats.tasksGenerated }}</div>
+                  <div class="stat-label">{{ t('gamTasks') }}</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-value">{{ userStats.quizzesCompleted }}</div>
+                  <div class="stat-label">{{ t('gamQuizzes') }}</div>
+                </div>
+              </div>
+              <h4 style="margin:16px 0 8px;color:var(--text)">{{ t('gamBadges') }}</h4>
+              <div class="badges-grid">
+                <div v-for="b in allBadges" :key="b.id" class="badge-item" :class="{ earned: userStats.badges?.includes(b.id) }">
+                  <span class="badge-icon">{{ b.icon }}</span>
+                  <span class="badge-name">{{ b.name }}</span>
+                </div>
+              </div>
+            </div>
+            <div v-else class="chat-empty"><p>{{ t('gamLogin') }}</p></div>
           </div>
 
           <!-- Originality Panel -->

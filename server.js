@@ -8,6 +8,10 @@ import { Server as SocketIO } from "socket.io";
 import { OAuth2Client } from "google-auth-library";
 import { MongoClient } from "mongodb";
 import jwt from "jsonwebtoken";
+import multer from "multer";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const pdf = require("pdf-parse");
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { randomBytes } from "crypto";
@@ -520,6 +524,149 @@ Responde SOLO con el JSON.`;
   } catch (err) {
     console.error("Error AI:", err.message);
     res.status(500).json({ error: "Error al evaluar. Intenta de nuevo." });
+  }
+});
+
+// ── Upload config ─────────────────────────────────────────────────
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+// ── Endpoint: Subir PDF y resumir ─────────────────────────────────
+app.post("/api/upload-pdf", upload.single("file"), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: "No se subió ningún archivo." });
+
+  try {
+    const data = await pdf(req.file.buffer);
+    const text = data.text.slice(0, 6000);
+
+    if (!text.trim()) return res.status(400).json({ error: "No se pudo extraer texto del PDF." });
+
+    const prompt = `Analiza el siguiente texto extraído de un PDF y genera un resumen completo.
+
+Texto del PDF:
+${text}
+
+Genera el contenido usando EXACTAMENTE estas secciones:
+
+## Resumen
+(Resumen claro y conciso del documento)
+
+## Explicación
+(Explicación detallada de los puntos principales)
+
+## Exposición
+(Contenido preparado para presentar oralmente)
+
+## Ideas Visuales
+(Sugerencias de recursos visuales para complementar)
+
+## Preguntas y Respuestas
+(5-8 preguntas con respuestas sobre el contenido)
+
+## Bibliografía
+(Referencias del documento si las hay, o sugerencias relacionadas)`;
+
+    const aiText = await generateText(prompt);
+    const secciones = parseSections(aiText);
+    res.json({ secciones, textoCompleto: aiText, extractedText: text.slice(0, 500) });
+  } catch (err) {
+    console.error("PDF error:", err.message);
+    res.status(500).json({ error: "Error al procesar el PDF." });
+  }
+});
+
+// ── Endpoint: Generar mapa mental ─────────────────────────────────
+app.post("/api/mapa-mental", async (req, res) => {
+  const { tema, texto } = req.body;
+  if (!tema) return res.status(400).json({ error: "Falta el tema." });
+
+  const prompt = `Genera un mapa mental sobre "${tema}" basado en este contenido:
+
+${(texto || tema).slice(0, 3000)}
+
+Responde SOLO con código Mermaid válido usando la sintaxis mindmap. Ejemplo:
+mindmap
+  root((Tema Central))
+    Subtema 1
+      Detalle A
+      Detalle B
+    Subtema 2
+      Detalle C
+      Detalle D
+
+NO uses comillas, NO uses caracteres especiales. Solo texto simple en cada nodo.
+El tema central debe ir entre doble paréntesis: root((Tema))
+Genera entre 4-6 subtemas principales con 2-3 detalles cada uno.
+Responde SOLO con el código mermaid, sin bloques de código markdown.`;
+
+  try {
+    const text = await generateText(prompt);
+    let mermaid = text.replace(/```mermaid\n?/g, "").replace(/```\n?/g, "").trim();
+    if (!mermaid.startsWith("mindmap")) mermaid = "mindmap\n  root((" + tema + "))\n    Subtema 1\n    Subtema 2";
+    res.json({ mermaid });
+  } catch (err) {
+    console.error("Error AI:", err.message);
+    res.status(500).json({ error: "Error al generar mapa mental." });
+  }
+});
+
+// ── Endpoint: Gamificación - obtener/actualizar stats ──────────────
+app.get("/api/stats", authOptional, async (req, res) => {
+  if (!req.user || !usersCol) return res.json({ stats: null });
+  try {
+    const user = await usersCol.findOne({ googleId: req.user.googleId });
+    res.json({ stats: user?.stats || { points: 0, streak: 0, badges: [], lastActive: null, tasksGenerated: 0, quizzesCompleted: 0, examsCompleted: 0 } });
+  } catch { res.json({ stats: null }); }
+});
+
+app.post("/api/stats", authRequired, async (req, res) => {
+  if (!usersCol) return res.status(500).json({ error: "DB no disponible." });
+  const { action } = req.body;
+  const pointsMap = { generate: 10, quiz: 15, exam: 25, flashcards: 5, chat: 2 };
+  const points = pointsMap[action] || 5;
+
+  try {
+    const user = await usersCol.findOne({ googleId: req.user.googleId });
+    const stats = user?.stats || { points: 0, streak: 0, badges: [], lastActive: null, tasksGenerated: 0, quizzesCompleted: 0, examsCompleted: 0 };
+
+    stats.points += points;
+    const today = new Date().toDateString();
+    const lastActive = stats.lastActive ? new Date(stats.lastActive).toDateString() : null;
+    const yesterday = new Date(Date.now() - 86400000).toDateString();
+
+    if (lastActive === yesterday) stats.streak++;
+    else if (lastActive !== today) stats.streak = 1;
+    stats.lastActive = new Date();
+
+    if (action === "generate") stats.tasksGenerated++;
+    if (action === "quiz") stats.quizzesCompleted++;
+    if (action === "exam") stats.examsCompleted++;
+
+    // Check badges
+    const badgeChecks = [
+      { id: "first_task", condition: stats.tasksGenerated >= 1, name: "Primera tarea" },
+      { id: "ten_tasks", condition: stats.tasksGenerated >= 10, name: "10 tareas" },
+      { id: "fifty_tasks", condition: stats.tasksGenerated >= 50, name: "50 tareas" },
+      { id: "quiz_master", condition: stats.quizzesCompleted >= 10, name: "Quiz Master" },
+      { id: "exam_pro", condition: stats.examsCompleted >= 5, name: "Exam Pro" },
+      { id: "streak_7", condition: stats.streak >= 7, name: "Racha de 7 días" },
+      { id: "streak_30", condition: stats.streak >= 30, name: "Racha de 30 días" },
+      { id: "points_100", condition: stats.points >= 100, name: "100 puntos" },
+      { id: "points_500", condition: stats.points >= 500, name: "500 puntos" },
+      { id: "points_1000", condition: stats.points >= 1000, name: "1000 puntos" },
+    ];
+
+    let newBadge = null;
+    for (const b of badgeChecks) {
+      if (b.condition && !stats.badges.includes(b.id)) {
+        stats.badges.push(b.id);
+        newBadge = b;
+      }
+    }
+
+    await usersCol.updateOne({ googleId: req.user.googleId }, { $set: { stats } });
+    res.json({ stats, newBadge });
+  } catch (err) {
+    res.status(500).json({ error: "Error al actualizar stats." });
   }
 });
 

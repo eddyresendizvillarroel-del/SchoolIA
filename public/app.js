@@ -72,6 +72,13 @@ const i18n = {
     collabRoom: "Sala", collabConnected: "conectados", collabLeave: "Salir",
     collabNotePlaceholder: "Escribe una nota para el equipo...",
     cloudSaved: "Guardado en la nube", cloudSaving: "Guardando...", cloudLoaded: "Tareas cargadas",
+    orUpload: "o sube un PDF", uploadPdf: "Subir PDF", uploadLoading: "Procesando PDF...",
+    mindmap: "Mapa Mental", mindmapTitle: "Mapa Mental Visual",
+    mindmapGenerate: "Generar mapa mental", loadingMindmap: "Generando...", mindmapRegenerate: "Regenerar",
+    gamification: "Logros", gamificationTitle: "Tus Logros",
+    gamPoints: "Puntos", gamStreak: "Racha (días)", gamTasks: "Tareas", gamQuizzes: "Quizzes",
+    gamBadges: "Insignias", gamLogin: "Inicia sesión para ver tus logros.",
+    newBadge: "¡Nueva insignia!",
   },
   en: {
     generateTask: "Generate your task", topic: "Topic", topicPlaceholder: "E.g.: The French Revolution",
@@ -143,6 +150,13 @@ const i18n = {
     collabRoom: "Room", collabConnected: "connected", collabLeave: "Leave",
     collabNotePlaceholder: "Write a note for the team...",
     cloudSaved: "Saved to cloud", cloudSaving: "Saving...", cloudLoaded: "Tasks loaded",
+    orUpload: "or upload a PDF", uploadPdf: "Upload PDF", uploadLoading: "Processing PDF...",
+    mindmap: "Mind Map", mindmapTitle: "Visual Mind Map",
+    mindmapGenerate: "Generate mind map", loadingMindmap: "Generating...", mindmapRegenerate: "Regenerate",
+    gamification: "Achievements", gamificationTitle: "Your Achievements",
+    gamPoints: "Points", gamStreak: "Streak (days)", gamTasks: "Tasks", gamQuizzes: "Quizzes",
+    gamBadges: "Badges", gamLogin: "Sign in to see your achievements.",
+    newBadge: "New badge!",
   },
   fr: {
     generateTask: "Génère ton devoir", topic: "Sujet", topicPlaceholder: "Ex: La Révolution Française",
@@ -375,6 +389,29 @@ createApp({
     const authToken = ref("");
     const authAvailable = ref(false);
     const cloudSyncStatus = ref("");
+
+    // Upload PDF
+    const uploadLoading = ref(false);
+
+    // Mindmap
+    const mindmapData = ref(null);
+    const mindmapLoading = ref(false);
+    const mindmapEl = ref(null);
+
+    // Gamification
+    const userStats = ref(null);
+    const allBadges = [
+      { id: "first_task", name: "Primera tarea", icon: "🎯" },
+      { id: "ten_tasks", name: "10 tareas", icon: "📚" },
+      { id: "fifty_tasks", name: "50 tareas", icon: "🏆" },
+      { id: "quiz_master", name: "Quiz Master", icon: "🧠" },
+      { id: "exam_pro", name: "Exam Pro", icon: "📝" },
+      { id: "streak_7", name: "Racha 7 días", icon: "🔥" },
+      { id: "streak_30", name: "Racha 30 días", icon: "💎" },
+      { id: "points_100", name: "100 puntos", icon: "⭐" },
+      { id: "points_500", name: "500 puntos", icon: "🌟" },
+      { id: "points_1000", name: "1000 puntos", icon: "👑" },
+    ];
 
     // Version history
     const versionHistory = ref([]);
@@ -671,7 +708,7 @@ show();
               try {
                 const data = JSON.parse(line.slice(6));
                 if (data.chunk) { streamingText.value += data.chunk; secciones.resumen = streamingText.value; }
-                if (data.done) { updateSections(data); guardarHistorial(); playNotificationSound(); saveVersion(t("vOriginal")); broadcastContent(); saveToCloud(); }
+                if (data.done) { updateSections(data); guardarHistorial(); playNotificationSound(); saveVersion(t("vOriginal")); broadcastContent(); saveToCloud(); trackAction("generate"); }
                 if (data.error) showError(data.error);
               } catch {}
             }
@@ -731,7 +768,7 @@ show();
       } catch { showError("Error de conexión."); } finally { quizLoading.value = false; }
     }
     function verificarQuiz() {
-      quizChecked.value = true; playNotificationSound();
+      quizChecked.value = true; playNotificationSound(); trackAction("quiz");
       if (quizScore.value && quizScore.value.correct >= Math.ceil(quizScore.value.total * 0.75)) launchConfetti();
     }
 
@@ -920,6 +957,99 @@ show();
       else if (e.key === "?") { showShortcuts.value = !showShortcuts.value; }
     }
 
+    // ── Upload PDF ─────────────────────────────────────────────────
+    async function subirPDF(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      uploadLoading.value = true;
+      const formData = new FormData();
+      formData.append("file", file);
+      try {
+        const res = await fetch("/api/upload-pdf", { method: "POST", body: formData });
+        const data = await res.json();
+        if (data.error) { showError(data.error); return; }
+        form.tema = file.name.replace(".pdf", "");
+        updateSections(data);
+        guardarHistorial();
+        playNotificationSound();
+        saveVersion(t("vOriginal"));
+        trackAction("generate");
+      } catch { showError("Error al procesar el PDF."); }
+      finally { uploadLoading.value = false; event.target.value = ""; }
+    }
+
+    // ── Mapa Mental ───────────────────────────────────────────────────
+    async function generarMapaMental() {
+      mindmapLoading.value = true; mindmapData.value = null;
+      try {
+        const res = await fetch("/api/mapa-mental", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tema: form.tema, texto: textoCompleto.value }) });
+        const data = await res.json(); if (data.error) { showError(data.error); return; }
+        mindmapData.value = data.mermaid;
+        nextTick(() => renderMindmap());
+      } catch { showError("Error de conexión."); }
+      finally { mindmapLoading.value = false; }
+    }
+
+    async function renderMindmap() {
+      if (!mindmapEl.value || !mindmapData.value) return;
+      try {
+        mermaid.initialize({ startOnLoad: false, theme: darkMode.value ? "dark" : "default", securityLevel: "loose" });
+        const { svg } = await mermaid.render("mindmap-svg-" + Date.now(), mindmapData.value);
+        mindmapEl.value.innerHTML = svg;
+      } catch { mindmapEl.value.innerHTML = '<p style="color:var(--text-secondary)">Error al renderizar el mapa mental. Intenta regenerar.</p>'; }
+    }
+
+    // ── PPTX Export ───────────────────────────────────────────────────
+    function exportarPPTX() {
+      if (typeof PptxGenJS === "undefined") { showError("PptxGenJS no cargó."); return; }
+      const pptx = new PptxGenJS();
+      pptx.defineLayout({ name: "WIDE", width: 13.33, height: 7.5 });
+      pptx.layout = "WIDE";
+
+      // Title slide
+      let slide = pptx.addSlide();
+      slide.addText(form.tema, { x: 0.5, y: 2, w: 12, h: 2, fontSize: 36, bold: true, color: "10a37f", align: "center" });
+      slide.addText(`${tipoLabel.value} · ${nivelLabel.value}`, { x: 0.5, y: 4, w: 12, h: 1, fontSize: 18, color: "888888", align: "center" });
+
+      // Content slides
+      for (const tab of tabs.value) {
+        if (!secciones[tab.key]) continue;
+        slide = pptx.addSlide();
+        slide.addText(`${tab.icon} ${tab.label}`, { x: 0.5, y: 0.3, w: 12, h: 0.8, fontSize: 24, bold: true, color: "10a37f" });
+        const clean = secciones[tab.key].replace(/[#*_`>]/g, "").replace(/\n{3,}/g, "\n\n");
+        slide.addText(clean, { x: 0.5, y: 1.3, w: 12, h: 5.5, fontSize: 14, color: "333333", valign: "top", wrap: true });
+      }
+
+      // Footer slide
+      slide = pptx.addSlide();
+      slide.addText("Generado con SchoolIA", { x: 0.5, y: 3, w: 12, h: 1, fontSize: 20, color: "999999", align: "center" });
+
+      pptx.writeFile({ fileName: `${form.tema || "presentacion"}.pptx` });
+    }
+
+    // ── Gamification ──────────────────────────────────────────────────
+    async function trackAction(action) {
+      if (!authToken.value) return;
+      try {
+        const res = await fetch("/api/stats", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken.value}` }, body: JSON.stringify({ action }) });
+        const data = await res.json();
+        if (data.stats) userStats.value = data.stats;
+        if (data.newBadge) {
+          showError(`🏅 ${t("newBadge")} ${data.newBadge.name}`);
+          launchConfetti();
+        }
+      } catch {}
+    }
+
+    async function loadStats() {
+      if (!authToken.value) return;
+      try {
+        const res = await fetch("/api/stats", { headers: { Authorization: `Bearer ${authToken.value}` } });
+        const data = await res.json();
+        if (data.stats) userStats.value = data.stats;
+      } catch {}
+    }
+
     // ── Auth ──────────────────────────────────────────────────────
     async function initAuth() {
       try {
@@ -978,7 +1108,7 @@ show();
         user.value = data.user;
         authToken.value = data.token;
         localStorage.setItem("schoolia-auth-token", data.token);
-        loadCloudTasks();
+        loadCloudTasks(); loadStats();
       } catch { showError("Error de autenticación."); }
     }
     window.handleGoogleAuth = handleGoogleAuth;
@@ -1068,6 +1198,10 @@ show();
       collabRoom, collabUserCount, collabNotes, collabNoteInput, collabJoinCode, collabNotesContainer,
       crearSala, unirseSala, salirSala, enviarNota, copiarCodigoSala,
       user, authAvailable, cloudSyncStatus, logout,
+      uploadLoading, subirPDF,
+      mindmapData, mindmapLoading, mindmapEl, generarMapaMental,
+      userStats, allBadges,
+      exportarPPTX,
     };
   },
 }).mount("#app");
