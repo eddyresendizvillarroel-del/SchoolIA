@@ -5,6 +5,9 @@ import compression from "compression";
 import rateLimit from "express-rate-limit";
 import { createServer } from "http";
 import { Server as SocketIO } from "socket.io";
+import { OAuth2Client } from "google-auth-library";
+import { MongoClient } from "mongodb";
+import jwt from "jsonwebtoken";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { randomBytes } from "crypto";
@@ -20,6 +23,123 @@ app.use(express.json());
 app.use(express.static(join(__dirname, "public")));
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+// ── Google Auth & MongoDB ─────────────────────────────────────────
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const JWT_SECRET = process.env.JWT_SECRET || "schoolia_default_secret";
+const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
+
+let db = null;
+let usersCol = null;
+let tasksCol = null;
+
+async function connectDB() {
+  if (!process.env.MONGODB_URI) return;
+  try {
+    const client = new MongoClient(process.env.MONGODB_URI);
+    await client.connect();
+    db = client.db("schoolia");
+    usersCol = db.collection("users");
+    tasksCol = db.collection("tasks");
+    await usersCol.createIndex({ googleId: 1 }, { unique: true });
+    await tasksCol.createIndex({ userId: 1, createdAt: -1 });
+    console.log("MongoDB conectado");
+  } catch (err) {
+    console.error("MongoDB error:", err.message);
+  }
+}
+connectDB();
+
+// ── Auth middleware ────────────────────────────────────────────────
+function authOptional(req, res, next) {
+  const auth = req.headers.authorization;
+  if (auth && auth.startsWith("Bearer ")) {
+    try {
+      const payload = jwt.verify(auth.slice(7), JWT_SECRET);
+      req.user = payload;
+    } catch {}
+  }
+  next();
+}
+
+function authRequired(req, res, next) {
+  authOptional(req, res, () => {
+    if (!req.user) return res.status(401).json({ error: "No autenticado." });
+    next();
+  });
+}
+
+// ── Auth endpoints ────────────────────────────────────────────────
+app.post("/api/auth/google", async (req, res) => {
+  if (!googleClient) return res.status(500).json({ error: "Auth no configurado." });
+  const { credential } = req.body;
+  if (!credential) return res.status(400).json({ error: "Falta el token." });
+
+  try {
+    const ticket = await googleClient.verifyIdToken({ idToken: credential, audience: GOOGLE_CLIENT_ID });
+    const payload = ticket.getPayload();
+    const { sub: googleId, email, name, picture } = payload;
+
+    if (usersCol) {
+      await usersCol.updateOne(
+        { googleId },
+        { $set: { email, name, picture, lastLogin: new Date() }, $setOnInsert: { googleId, createdAt: new Date() } },
+        { upsert: true }
+      );
+    }
+
+    const token = jwt.sign({ googleId, email, name, picture }, JWT_SECRET, { expiresIn: "7d" });
+    res.json({ token, user: { name, email, picture } });
+  } catch (err) {
+    console.error("Auth error:", err.message);
+    res.status(401).json({ error: "Token inválido." });
+  }
+});
+
+app.get("/api/auth/me", authRequired, (req, res) => {
+  res.json({ user: req.user });
+});
+
+// ── User tasks (cloud storage) ────────────────────────────────────
+app.get("/api/tareas", authRequired, async (req, res) => {
+  if (!tasksCol) return res.json({ tareas: [] });
+  try {
+    const tareas = await tasksCol.find({ userId: req.user.googleId }).sort({ createdAt: -1 }).limit(50).toArray();
+    res.json({ tareas });
+  } catch (err) {
+    res.status(500).json({ error: "Error al cargar tareas." });
+  }
+});
+
+app.post("/api/tareas", authRequired, async (req, res) => {
+  if (!tasksCol) return res.status(500).json({ error: "Base de datos no disponible." });
+  const { tema, nivel, tipo, idioma, secciones, textoCompleto } = req.body;
+  try {
+    const result = await tasksCol.insertOne({
+      userId: req.user.googleId,
+      tema, nivel, tipo, idioma, secciones, textoCompleto,
+      createdAt: new Date(),
+    });
+    res.json({ id: result.insertedId });
+  } catch (err) {
+    res.status(500).json({ error: "Error al guardar." });
+  }
+});
+
+app.delete("/api/tareas/:id", authRequired, async (req, res) => {
+  if (!tasksCol) return res.status(500).json({ error: "Base de datos no disponible." });
+  try {
+    const { ObjectId } = await import("mongodb");
+    await tasksCol.deleteOne({ _id: new ObjectId(req.params.id), userId: req.user.googleId });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: "Error al eliminar." });
+  }
+});
+
+app.get("/api/auth/config", (req, res) => {
+  res.json({ clientId: GOOGLE_CLIENT_ID || null });
+});
 
 // ── Rate limiting ─────────────────────────────────────────────────
 const apiLimiter = rateLimit({

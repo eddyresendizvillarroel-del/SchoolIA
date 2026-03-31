@@ -71,6 +71,7 @@ const i18n = {
     collabJoinLabel: "Unirse a una sala", collabCodePlaceholder: "Código de sala",
     collabRoom: "Sala", collabConnected: "conectados", collabLeave: "Salir",
     collabNotePlaceholder: "Escribe una nota para el equipo...",
+    cloudSaved: "Guardado en la nube", cloudSaving: "Guardando...", cloudLoaded: "Tareas cargadas",
   },
   en: {
     generateTask: "Generate your task", topic: "Topic", topicPlaceholder: "E.g.: The French Revolution",
@@ -141,6 +142,7 @@ const i18n = {
     collabJoinLabel: "Join a room", collabCodePlaceholder: "Room code",
     collabRoom: "Room", collabConnected: "connected", collabLeave: "Leave",
     collabNotePlaceholder: "Write a note for the team...",
+    cloudSaved: "Saved to cloud", cloudSaving: "Saving...", cloudLoaded: "Tasks loaded",
   },
   fr: {
     generateTask: "Génère ton devoir", topic: "Sujet", topicPlaceholder: "Ex: La Révolution Française",
@@ -367,6 +369,12 @@ createApp({
     const collabJoinCode = ref("");
     const collabNotesContainer = ref(null);
     let socket = null;
+
+    // Auth
+    const user = ref(null);
+    const authToken = ref("");
+    const authAvailable = ref(false);
+    const cloudSyncStatus = ref("");
 
     // Version history
     const versionHistory = ref([]);
@@ -663,7 +671,7 @@ show();
               try {
                 const data = JSON.parse(line.slice(6));
                 if (data.chunk) { streamingText.value += data.chunk; secciones.resumen = streamingText.value; }
-                if (data.done) { updateSections(data); guardarHistorial(); playNotificationSound(); saveVersion(t("vOriginal")); broadcastContent(); }
+                if (data.done) { updateSections(data); guardarHistorial(); playNotificationSound(); saveVersion(t("vOriginal")); broadcastContent(); saveToCloud(); }
                 if (data.error) showError(data.error);
               } catch {}
             }
@@ -912,6 +920,102 @@ show();
       else if (e.key === "?") { showShortcuts.value = !showShortcuts.value; }
     }
 
+    // ── Auth ──────────────────────────────────────────────────────
+    async function initAuth() {
+      try {
+        const res = await fetch("/api/auth/config");
+        const data = await res.json();
+        if (!data.clientId) return;
+        authAvailable.value = true;
+
+        // Check saved token
+        const savedToken = localStorage.getItem("schoolia-auth-token");
+        if (savedToken) {
+          authToken.value = savedToken;
+          try {
+            const meRes = await fetch("/api/auth/me", { headers: { Authorization: `Bearer ${savedToken}` } });
+            if (meRes.ok) {
+              const meData = await meRes.json();
+              user.value = meData.user;
+              loadCloudTasks();
+            } else {
+              localStorage.removeItem("schoolia-auth-token");
+            }
+          } catch {}
+        }
+
+        // Render Google button after Vue updates DOM
+        nextTick(() => {
+          setTimeout(() => {
+            const btnEl = document.getElementById("google-signin-btn");
+            if (btnEl && window.google) {
+              google.accounts.id.initialize({
+                client_id: data.clientId,
+                callback: handleGoogleAuth,
+              });
+              google.accounts.id.renderButton(btnEl, {
+                theme: "filled_black",
+                size: "medium",
+                width: 260,
+                text: "signin_with",
+                shape: "pill",
+              });
+            }
+          }, 500);
+        });
+      } catch {}
+    }
+
+    async function handleGoogleAuth(response) {
+      try {
+        const res = await fetch("/api/auth/google", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ credential: response.credential }),
+        });
+        const data = await res.json();
+        if (data.error) { showError(data.error); return; }
+        user.value = data.user;
+        authToken.value = data.token;
+        localStorage.setItem("schoolia-auth-token", data.token);
+        loadCloudTasks();
+      } catch { showError("Error de autenticación."); }
+    }
+    window.handleGoogleAuth = handleGoogleAuth;
+
+    function logout() {
+      user.value = null;
+      authToken.value = "";
+      localStorage.removeItem("schoolia-auth-token");
+      cloudSyncStatus.value = "";
+    }
+
+    async function loadCloudTasks() {
+      if (!authToken.value) return;
+      try {
+        const res = await fetch("/api/tareas", { headers: { Authorization: `Bearer ${authToken.value}` } });
+        const data = await res.json();
+        if (data.tareas && data.tareas.length) {
+          cloudSyncStatus.value = t("cloudLoaded");
+          setTimeout(() => { cloudSyncStatus.value = ""; }, 3000);
+        }
+      } catch {}
+    }
+
+    async function saveToCloud() {
+      if (!authToken.value || !textoCompleto.value) return;
+      cloudSyncStatus.value = t("cloudSaving");
+      try {
+        await fetch("/api/tareas", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken.value}` },
+          body: JSON.stringify({ tema: form.tema, nivel: form.nivel, tipo: form.tipo, idioma: form.idioma, secciones: { ...secciones }, textoCompleto: textoCompleto.value }),
+        });
+        cloudSyncStatus.value = t("cloudSaved");
+        setTimeout(() => { cloudSyncStatus.value = ""; }, 3000);
+      } catch { cloudSyncStatus.value = ""; }
+    }
+
     // ── Load shared ────────────────────────────────────────────────
     async function loadSharedTask() {
       const params = new URLSearchParams(window.location.search);
@@ -931,6 +1035,7 @@ show();
       const savedLang = localStorage.getItem("schoolia-lang"); if (savedLang) form.idioma = savedLang;
       const savedSound = localStorage.getItem("schoolia-pomodoro-sound"); if (savedSound) pomodoroSound.value = savedSound;
       loadSharedTask();
+      initAuth();
       document.addEventListener("keydown", handleKeyboard);
       if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
     });
@@ -962,6 +1067,7 @@ show();
       imageQuery, imagesData, imagesLoading, buscarImagenes,
       collabRoom, collabUserCount, collabNotes, collabNoteInput, collabJoinCode, collabNotesContainer,
       crearSala, unirseSala, salirSala, enviarNota, copiarCodigoSala,
+      user, authAvailable, cloudSyncStatus, logout,
     };
   },
 }).mount("#app");
