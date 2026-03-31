@@ -793,3 +793,167 @@ body {
   background: rgba(16, 163, 127, 0.3);
   color: white;
 }
+
+/* ── Light Mode ───────────────────────────────────────────────── */
+body.light-mode {
+  --bg: #ffffff;
+  --bg-sidebar: #f7f7f8;
+  --bg-card: #f0f0f1;
+  --bg-card-hover: #e8e8e9;
+  --border: #d9d9d9;
+  --border-light: #e5e5e5;
+  --text: #1a1a1a;
+  --text-secondary: #666666;
+  --accent-soft: rgba(16, 163, 127, 0.08);
+  --accent-glow: rgba(16, 163, 127, 0.15);
+  --blue-soft: rgba(59, 130, 246, 0.08);
+}
+
+body.light-mode .section-content code {
+  background: #e8e8e9;
+  border-color: #d9d9d9;
+}
+
+body.light-mode .toast-error {
+  background: rgba(255, 240, 240, 0.95);
+}
+
+/* ── Sidebar Top ──────────────────────────────────────────────── */
+.sidebar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.top-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.icon-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* ── Historial ────────────────────────────────────────────────── */
+.historial {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.historial-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.historial-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  color: var(--text);
+}
+
+.historial-item:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.historial-tema {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.historial-meta {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.historial-clear {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 4px 0;
+  font-family: inherit;
+  text-align: left;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.historial-clear:hover {
+  opacity: 1;
+  color: var(--red);
+}
+
+/* ── Word Count Bar ───────────────────────────────────────────── */
+.word-count-bar {
+  display: flex;
+  gap: 12px;
+  padding: 8px 16px;
+  margin-bottom: 12px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  overflow-x: auto;
+}
+
+.word-count-item {
+  white-space: nowrap;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.word-count-item.active {
+  opacity: 1;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ── Export Buttons ────────────────────────────────────────────── */
+.btn-export {
+  color: var(--orange);
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.btn-export:hover:not(:disabled) {
+  color: var(--orange);
+  border-color: var(--orange);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+/* ── Badge Words ──────────────────────────────────────────────── */
+.badge-words {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--orange);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}

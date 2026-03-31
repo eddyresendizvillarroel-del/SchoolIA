@@ -24,13 +24,13 @@ async function generateText(prompt) {
 
 // ── Endpoint principal: Generar tarea ──────────────────────────────
 app.post("/api/generar", async (req, res) => {
-  const { tema, nivel, tipo, personas } = req.body;
+  const { tema, nivel, tipo, idioma, personas } = req.body;
 
   if (!tema || !nivel || !tipo) {
     return res.status(400).json({ error: "Faltan campos requeridos: tema, nivel y tipo." });
   }
 
-  const prompt = buildPrompt(tema, nivel, tipo, personas);
+  const prompt = buildPrompt(tema, nivel, tipo, idioma || "es", personas);
 
   try {
     const text = await generateText(prompt);
@@ -89,11 +89,23 @@ ${texto}`;
 });
 
 // ── Construir prompt estructurado ──────────────────────────────────
-function buildPrompt(tema, nivel, tipo, personas) {
+function buildPrompt(tema, nivel, tipo, idioma, personas) {
   const nivelTexto = { facil: "básico y sencillo", medio: "intermedio con buen detalle", dificil: "avanzado y profundo" };
-  const tipoTexto = { tarea: "tarea escolar", exposicion: "exposición oral", resumen: "resumen académico" };
+  const tipoTexto = {
+    tarea: "tarea escolar",
+    exposicion: "exposición oral",
+    resumen: "resumen académico",
+    ensayo: "ensayo argumentativo",
+    mapa_conceptual: "mapa conceptual detallado (usar listas jerárquicas y relaciones entre conceptos)",
+    linea_tiempo: "línea de tiempo cronológica (listar eventos con fechas y descripciones)"
+  };
+
+  const idiomaTexto = {
+    es: "español", en: "inglés", fr: "francés", pt: "portugués", de: "alemán"
+  };
 
   let prompt = `Eres un asistente educativo. Genera un trabajo escolar completo sobre el tema indicado.
+IMPORTANTE: Escribe TODO el contenido en ${idiomaTexto[idioma] || "español"}.
 
 TEMA: ${tema}
 NIVEL DE DIFICULTAD: ${nivelTexto[nivel] || nivel}
@@ -109,6 +121,7 @@ INSTRUCCIONES IMPORTANTES:
 - Escribe como un estudiante real, con lenguaje natural y accesible.
 - El contenido debe ser preciso, educativo y bien organizado.
 - Adapta la complejidad y extensión al nivel de dificultad indicado.
+- TODO debe estar en ${idiomaTexto[idioma] || "español"}.
 
 Genera el contenido usando EXACTAMENTE estas secciones con estos encabezados:
 
