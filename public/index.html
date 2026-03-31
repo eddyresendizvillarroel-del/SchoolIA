@@ -6,8 +6,9 @@
   <title>SchoolIA - Genera Tareas con IA</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
   <link rel="stylesheet" href="style.css">
-  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@4/marked.min.js"></script>
+  <script>window.onerror=function(m,s,l,c,e){document.body.innerHTML='<pre style="color:red;padding:20px;">ERROR: '+m+'\nLine: '+l+'\n'+((e&&e.stack)||'')+'</pre>';}</script>
 </head>
 <body>
   <div id="app">
@@ -234,7 +235,7 @@
                   selected: quizAnswers[qi] === oi,
                   correct: quizChecked && q.correcta === oi,
                   incorrect: quizChecked && quizAnswers[qi] === oi && q.correcta !== oi
-                }" @click="if(!quizChecked) quizAnswers[qi] = oi">
+                }" @click="!quizChecked && (quizAnswers[qi] = oi)">
                   <span class="quiz-letter">{{ ['A','B','C','D'][oi] }}</span>
                   {{ opt }}
                 </div>
