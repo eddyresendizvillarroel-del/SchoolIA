@@ -3,6 +3,7 @@ import express from "express";
 import Groq from "groq-sdk";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
+import { randomBytes } from "crypto";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -11,6 +12,9 @@ app.use(express.json());
 app.use(express.static(join(__dirname, "public")));
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+// In-memory store for shared tasks
+const sharedTasks = new Map();
 
 async function generateText(prompt) {
   const chatCompletion = await groq.chat.completions.create({
@@ -21,6 +25,48 @@ async function generateText(prompt) {
   });
   return chatCompletion.choices[0]?.message?.content || "";
 }
+
+// ── Streaming generation ───────────────────────────────────────────
+app.post("/api/generar-stream", async (req, res) => {
+  const { tema, nivel, tipo, idioma, personas } = req.body;
+
+  if (!tema || !nivel || !tipo) {
+    return res.status(400).json({ error: "Faltan campos requeridos." });
+  }
+
+  const prompt = buildPrompt(tema, nivel, tipo, idioma || "es", personas);
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
+  try {
+    const stream = await groq.chat.completions.create({
+      messages: [{ role: "user", content: prompt }],
+      model: "llama-3.3-70b-versatile",
+      temperature: 0.7,
+      max_tokens: 4096,
+      stream: true,
+    });
+
+    let fullText = "";
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content || "";
+      if (content) {
+        fullText += content;
+        res.write(`data: ${JSON.stringify({ chunk: content })}\n\n`);
+      }
+    }
+
+    const secciones = parseSections(fullText);
+    res.write(`data: ${JSON.stringify({ done: true, secciones, textoCompleto: fullText })}\n\n`);
+    res.end();
+  } catch (err) {
+    console.error("Error AI stream:", err.message);
+    res.write(`data: ${JSON.stringify({ error: "Error al generar. Intenta de nuevo." })}\n\n`);
+    res.end();
+  }
+});
 
 // ── Endpoint principal: Generar tarea ──────────────────────────────
 app.post("/api/generar", async (req, res) => {
@@ -88,6 +134,161 @@ ${texto}`;
   }
 });
 
+// ── Endpoint: Ampliar sección ──────────────────────────────────────
+app.post("/api/ampliar", async (req, res) => {
+  const { seccion, tema } = req.body;
+  if (!seccion) return res.status(400).json({ error: "Falta la sección." });
+
+  const prompt = `Amplía y desarrolla con mucho más detalle la siguiente sección de un trabajo escolar sobre "${tema || 'el tema'}".
+Agrega más información, ejemplos, datos interesantes y explicaciones más profundas.
+Mantén el mismo formato markdown.
+
+Sección a ampliar:
+${seccion}`;
+
+  try {
+    const text = await generateText(prompt);
+    res.json({ texto: text });
+  } catch (err) {
+    console.error("Error AI:", err.message);
+    res.status(500).json({ error: "Error al ampliar. Intenta de nuevo." });
+  }
+});
+
+// ── Endpoint: Chat sobre el tema ───────────────────────────────────
+app.post("/api/chat", async (req, res) => {
+  const { pregunta, contexto } = req.body;
+  if (!pregunta) return res.status(400).json({ error: "Falta la pregunta." });
+
+  const prompt = `Eres un tutor educativo amigable. El estudiante tiene un trabajo sobre un tema y quiere hacerte preguntas.
+
+Contexto del trabajo:
+${contexto || "(sin contexto)"}
+
+Pregunta del estudiante: ${pregunta}
+
+Responde de forma clara, educativa y amigable. Si no sabes algo, dilo honestamente. Usa markdown para formatear.`;
+
+  try {
+    const text = await generateText(prompt);
+    res.json({ respuesta: text });
+  } catch (err) {
+    console.error("Error AI:", err.message);
+    res.status(500).json({ error: "Error al responder. Intenta de nuevo." });
+  }
+});
+
+// ── Endpoint: Generar quiz ─────────────────────────────────────────
+app.post("/api/quiz", async (req, res) => {
+  const { tema, texto } = req.body;
+  if (!tema) return res.status(400).json({ error: "Falta el tema." });
+
+  const prompt = `Genera un quiz de opción múltiple sobre "${tema}" basado en el siguiente contenido.
+
+Contenido:
+${texto || tema}
+
+Genera EXACTAMENTE 8 preguntas en formato JSON. Cada pregunta debe tener:
+- "pregunta": la pregunta
+- "opciones": array de 4 opciones (a, b, c, d)
+- "correcta": índice de la respuesta correcta (0-3)
+- "explicacion": breve explicación de por qué esa es la respuesta
+
+Responde SOLO con el JSON, sin texto adicional. El formato debe ser:
+[{"pregunta":"...","opciones":["a","b","c","d"],"correcta":0,"explicacion":"..."}]`;
+
+  try {
+    const text = await generateText(prompt);
+    // Extract JSON from response
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      const quiz = JSON.parse(jsonMatch[0]);
+      res.json({ quiz });
+    } else {
+      res.status(500).json({ error: "Error al parsear el quiz." });
+    }
+  } catch (err) {
+    console.error("Error AI:", err.message);
+    res.status(500).json({ error: "Error al generar quiz. Intenta de nuevo." });
+  }
+});
+
+// ── Endpoint: Calificar respuesta ──────────────────────────────────
+app.post("/api/calificar", async (req, res) => {
+  const { tema, pregunta, respuesta } = req.body;
+  if (!respuesta) return res.status(400).json({ error: "Falta la respuesta." });
+
+  const prompt = `Eres un profesor evaluando la respuesta de un estudiante.
+
+Tema: ${tema || "General"}
+Pregunta: ${pregunta || "Explica el tema"}
+Respuesta del estudiante: ${respuesta}
+
+Evalúa la respuesta y responde en este formato exacto JSON:
+{"calificacion": (número del 1 al 10), "retroalimentacion": "(feedback detallado)", "puntos_buenos": ["punto1", "punto2"], "areas_mejora": ["area1", "area2"]}
+
+Responde SOLO con el JSON.`;
+
+  try {
+    const text = await generateText(prompt);
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const result = JSON.parse(jsonMatch[0]);
+      res.json(result);
+    } else {
+      res.status(500).json({ error: "Error al parsear calificación." });
+    }
+  } catch (err) {
+    console.error("Error AI:", err.message);
+    res.status(500).json({ error: "Error al calificar. Intenta de nuevo." });
+  }
+});
+
+// ── Endpoint: Compartir tarea ──────────────────────────────────────
+app.post("/api/compartir", (req, res) => {
+  const { tema, tipo, nivel, secciones, textoCompleto } = req.body;
+  const id = randomBytes(4).toString("hex");
+  sharedTasks.set(id, { tema, tipo, nivel, secciones, textoCompleto, createdAt: Date.now() });
+  // Clean old entries (older than 24h)
+  for (const [key, val] of sharedTasks) {
+    if (Date.now() - val.createdAt > 86400000) sharedTasks.delete(key);
+  }
+  res.json({ id });
+});
+
+app.get("/api/compartir/:id", (req, res) => {
+  const data = sharedTasks.get(req.params.id);
+  if (!data) return res.status(404).json({ error: "Tarea no encontrada o expirada." });
+  res.json(data);
+});
+
+// ── Endpoint: Generar flashcards ───────────────────────────────────
+app.post("/api/flashcards", async (req, res) => {
+  const { tema, texto } = req.body;
+  if (!tema) return res.status(400).json({ error: "Falta el tema." });
+
+  const prompt = `Genera 10 flashcards de estudio sobre "${tema}" basadas en este contenido:
+
+${texto || tema}
+
+Responde SOLO en formato JSON:
+[{"frente": "pregunta o concepto", "reverso": "respuesta o definición"}]`;
+
+  try {
+    const text = await generateText(prompt);
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      const flashcards = JSON.parse(jsonMatch[0]);
+      res.json({ flashcards });
+    } else {
+      res.status(500).json({ error: "Error al generar flashcards." });
+    }
+  } catch (err) {
+    console.error("Error AI:", err.message);
+    res.status(500).json({ error: "Error al generar flashcards. Intenta de nuevo." });
+  }
+});
+
 // ── Construir prompt estructurado ──────────────────────────────────
 function buildPrompt(tema, nivel, tipo, idioma, personas) {
   const nivelTexto = { facil: "básico y sencillo", medio: "intermedio con buen detalle", dificil: "avanzado y profundo" };
@@ -138,7 +339,10 @@ Genera el contenido usando EXACTAMENTE estas secciones con estos encabezados:
 (Sugerencias de recursos visuales: diagramas, mapas mentales, imágenes, gráficos que complementen el trabajo)
 
 ## Preguntas y Respuestas
-(5-8 preguntas con sus respuestas sobre el tema, útiles para estudiar o preparar una exposición)`;
+(5-8 preguntas con sus respuestas sobre el tema, útiles para estudiar o preparar una exposición)
+
+## Bibliografía
+(5-8 referencias bibliográficas relevantes sobre el tema: libros, artículos, sitios web educativos. Usa formato APA.)`;
 
   return prompt;
 }
@@ -151,6 +355,7 @@ function parseSections(text) {
     exposicion: "",
     ideas_visuales: "",
     preguntas: "",
+    bibliografia: "",
   };
 
   const patterns = [
@@ -159,17 +364,16 @@ function parseSections(text) {
     { key: "exposicion", regex: /##\s*Exposici[oó]n\s*\n([\s\S]*?)(?=##\s|$)/ },
     { key: "ideas_visuales", regex: /##\s*Ideas?\s*Visuales?\s*\n([\s\S]*?)(?=##\s|$)/ },
     { key: "preguntas", regex: /##\s*Preguntas?\s*(y|&)\s*Respuestas?\s*\n([\s\S]*?)(?=##\s|$)/ },
+    { key: "bibliografia", regex: /##\s*Bibliograf[ií]a\s*\n([\s\S]*?)(?=##\s|$)/ },
   ];
 
   for (const { key, regex } of patterns) {
     const match = text.match(regex);
     if (match) {
-      // For "preguntas" the content is in group 2 (because of the (y|&) group)
       sectionMap[key] = (key === "preguntas" ? match[2] : match[1]).trim();
     }
   }
 
-  // If parsing failed, put everything in "resumen" as fallback
   const hasContent = Object.values(sectionMap).some((v) => v.length > 0);
   if (!hasContent) {
     sectionMap.resumen = text;

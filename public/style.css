@@ -794,6 +794,482 @@ body {
   color: white;
 }
 
+/* ── Tool Buttons ─────────────────────────────────────────────── */
+.tool-buttons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.tool-btn {
+  padding: 8px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tool-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.tool-btn.active {
+  color: white;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ── Tool Panel ───────────────────────────────────────────────── */
+.tool-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 20px;
+  animation: fadeIn 0.3s ease;
+}
+
+.tool-panel h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--text);
+}
+
+.panel-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  padding: 20px 0;
+}
+
+/* ── Chat ─────────────────────────────────────────────────────── */
+.chat-messages {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chat-msg {
+  display: flex;
+}
+
+.chat-msg.user {
+  justify-content: flex-end;
+}
+
+.chat-bubble {
+  max-width: 80%;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.chat-msg.user .chat-bubble {
+  background: var(--accent);
+  color: white;
+}
+
+.chat-msg.ai .chat-bubble {
+  background: var(--bg-card-hover);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.chat-msg.ai .chat-bubble p { margin-bottom: 8px; }
+.chat-msg.ai .chat-bubble p:last-child { margin-bottom: 0; }
+
+.chat-input-area {
+  display: flex;
+  gap: 8px;
+}
+
+.chat-input-area input {
+  flex: 1;
+  padding: 10px 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+}
+
+.chat-input-area input:focus {
+  border-color: var(--accent);
+}
+
+.chat-input-area button {
+  padding: 10px 20px;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: white;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.chat-input-area button:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.chat-input-area button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Quiz ─────────────────────────────────────────────────────── */
+.quiz-container h3 { margin-bottom: 20px; }
+
+.quiz-question {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.quiz-q {
+  font-size: 15px;
+  margin-bottom: 10px;
+  color: var(--text);
+}
+
+.quiz-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text);
+  transition: all 0.2s;
+}
+
+.quiz-option:hover { border-color: var(--accent); }
+.quiz-option.selected { border-color: var(--accent); background: var(--accent-soft); }
+.quiz-option.correct { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+.quiz-option.incorrect { border-color: var(--red); background: rgba(239, 68, 68, 0.1); color: var(--red); }
+
+.quiz-letter {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bg-card-hover);
+  font-weight: 700;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.quiz-explanation {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.quiz-score {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--accent-soft);
+  border: 1px solid rgba(16, 163, 127, 0.2);
+  border-radius: var(--radius-sm);
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--accent);
+}
+
+/* ── Flashcards ───────────────────────────────────────────────── */
+.flashcard-container h3 { margin-bottom: 20px; }
+
+.flashcard {
+  width: 100%;
+  height: 220px;
+  perspective: 1000px;
+  cursor: pointer;
+  margin-bottom: 16px;
+}
+
+.flashcard-inner {
+  width: 100%;
+  height: 100%;
+  transition: transform 0.5s;
+  transform-style: preserve-3d;
+  position: relative;
+}
+
+.flashcard.flipped .flashcard-inner {
+  transform: rotateY(180deg);
+}
+
+.flashcard-front,
+.flashcard-back {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+.flashcard-front {
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  color: white;
+}
+
+.flashcard-front p {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.flashcard-front small {
+  margin-top: 12px;
+  opacity: 0.7;
+  font-size: 12px;
+}
+
+.flashcard-back {
+  background: var(--bg);
+  border: 2px solid var(--accent);
+  color: var(--text);
+  transform: rotateY(180deg);
+}
+
+.flashcard-back p {
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.flashcard-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.flashcard-nav button {
+  padding: 8px 18px;
+  background: var(--bg-card-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  color: var(--text);
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.flashcard-nav button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.flashcard-nav button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.flashcard-nav span {
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+/* ── Grader ───────────────────────────────────────────────────── */
+.tool-panel textarea {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+
+.tool-panel textarea:focus {
+  border-color: var(--accent);
+}
+
+.grader-result {
+  margin-top: 20px;
+  padding: 20px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.grade-score {
+  font-size: 24px;
+  margin-bottom: 12px;
+  color: var(--accent);
+}
+
+.grader-result ul {
+  margin: 8px 0 12px 20px;
+}
+
+.grader-result li {
+  margin-bottom: 4px;
+  color: var(--text-secondary);
+}
+
+/* ── Share ─────────────────────────────────────────────────────── */
+.share-link {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.share-link input {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-xs);
+  color: var(--accent);
+  font-size: 13px;
+  font-family: monospace;
+  outline: none;
+}
+
+.share-copied {
+  font-size: 13px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ── Pomodoro ─────────────────────────────────────────────────── */
+.pomodoro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+}
+
+.pomodoro-label {
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--accent);
+}
+
+.pomodoro-time {
+  font-size: 64px;
+  font-weight: 800;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 2px;
+}
+
+.pomodoro-controls {
+  display: flex;
+  gap: 10px;
+}
+
+.pomodoro-controls button {
+  padding: 10px 24px;
+  background: var(--bg-card-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pomodoro-controls button:first-child {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.pomodoro-controls button:hover {
+  transform: translateY(-1px);
+}
+
+/* ── Expand Button ────────────────────────────────────────────── */
+.btn-expand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  margin-top: 12px;
+  background: var(--bg-card);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-expand:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.btn-expand:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Streaming ────────────────────────────────────────────────── */
+.streaming-content {
+  min-height: 300px;
+}
+
+.streaming-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  margin-top: 12px;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 500;
+}
+
 /* ── Light Mode ───────────────────────────────────────────────── */
 body.light-mode {
   --bg: #ffffff;
