@@ -1,4 +1,4 @@
-const CACHE_NAME = 'schoolia-cache-v1';
+const CACHE_NAME = 'schoolia-cache-v2';
 
 const APP_SHELL = [
   '/',
@@ -7,8 +7,9 @@ const APP_SHELL = [
   '/app.js',
   '/icon.svg',
   '/manifest.json',
-  'https://cdn.jsdelivr.net/npm/marked/marked.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js'
+  'https://unpkg.com/vue@3/dist/vue.global.js',
+  'https://cdn.jsdelivr.net/npm/marked@4/marked.min.js',
+  'https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js'
 ];
 
 // Install: cache the app shell
@@ -35,52 +36,41 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch: network-first for API calls, cache-first for static assets
+// Fetch: network-first for everything, fallback to cache
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
   // Network-first for API calls
-  if (request.url.includes('/api/') || request.url.includes('openai.com') || request.url.includes('anthropic.com')) {
+  if (request.url.includes('/api/') || request.url.includes('socket.io')) {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          return response;
-        })
-        .catch(() => {
-          return new Response(
-            JSON.stringify({ error: 'Sin conexion a internet. Por favor, verifica tu red.' }),
-            { status: 503, headers: { 'Content-Type': 'application/json' } }
-          );
-        })
+      fetch(request).catch(() => {
+        return new Response(
+          JSON.stringify({ error: 'Sin conexion a internet.' }),
+          { status: 503, headers: { 'Content-Type': 'application/json' } }
+        );
+      })
     );
     return;
   }
 
-  // Cache-first for static assets
+  // Network-first for static assets too (to always get latest)
   event.respondWith(
-    caches.match(request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-
-      return fetch(request)
-        .then((networkResponse) => {
-          // Cache successful GET responses
-          if (networkResponse && networkResponse.status === 200 && request.method === 'GET') {
-            const responseClone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return networkResponse;
-        })
-        .catch(() => {
-          // Offline fallback: return the cached index.html for navigation requests
-          if (request.mode === 'navigate') {
-            return caches.match('/index.html');
-          }
-          return new Response('Offline', { status: 503, statusText: 'Offline' });
+    fetch(request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200 && request.method === 'GET') {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(request, responseClone);
+          });
+        }
+        return networkResponse;
+      })
+      .catch(() => {
+        return caches.match(request).then((cachedResponse) => {
+          if (cachedResponse) return cachedResponse;
+          if (request.mode === 'navigate') return caches.match('/index.html');
+          return new Response('Offline', { status: 503 });
         });
-    })
+      })
   );
 });
