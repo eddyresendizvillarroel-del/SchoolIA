@@ -1,6 +1,8 @@
 import "dotenv/config";
 import express from "express";
 import Groq from "groq-sdk";
+import compression from "compression";
+import rateLimit from "express-rate-limit";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { randomBytes } from "crypto";
@@ -8,13 +10,50 @@ import { randomBytes } from "crypto";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 
+// ── Middlewares ────────────────────────────────────────────────────
+app.use(compression());
 app.use(express.json());
 app.use(express.static(join(__dirname, "public")));
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// In-memory store for shared tasks
+// ── Rate limiting ─────────────────────────────────────────────────
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Demasiadas solicitudes. Espera un momento antes de intentar de nuevo." },
+});
+
+app.use("/api/", apiLimiter);
+
+// ── In-memory stores ──────────────────────────────────────────────
 const sharedTasks = new Map();
+const responseCache = new Map();
+const CACHE_TTL = 10 * 60 * 1000; // 10 min
+
+function getCacheKey(params) {
+  return JSON.stringify(params);
+}
+
+function getCached(key) {
+  const entry = responseCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > CACHE_TTL) {
+    responseCache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function setCache(key, data) {
+  if (responseCache.size > 200) {
+    const oldest = responseCache.keys().next().value;
+    responseCache.delete(oldest);
+  }
+  responseCache.set(key, { data, timestamp: Date.now() });
+}
 
 async function generateText(prompt) {
   const chatCompletion = await groq.chat.completions.create({
@@ -59,8 +98,13 @@ app.post("/api/generar-stream", async (req, res) => {
     }
 
     const secciones = parseSections(fullText);
-    res.write(`data: ${JSON.stringify({ done: true, secciones, textoCompleto: fullText })}\n\n`);
+    const result = { done: true, secciones, textoCompleto: fullText };
+    res.write(`data: ${JSON.stringify(result)}\n\n`);
     res.end();
+
+    // Cache the result
+    const cacheKey = getCacheKey({ tema, nivel, tipo, idioma, personas });
+    setCache(cacheKey, { secciones, textoCompleto: fullText });
   } catch (err) {
     console.error("Error AI stream:", err.message);
     res.write(`data: ${JSON.stringify({ error: "Error al generar. Intenta de nuevo." })}\n\n`);
@@ -76,12 +120,18 @@ app.post("/api/generar", async (req, res) => {
     return res.status(400).json({ error: "Faltan campos requeridos: tema, nivel y tipo." });
   }
 
+  const cacheKey = getCacheKey({ tema, nivel, tipo, idioma, personas });
+  const cached = getCached(cacheKey);
+  if (cached) return res.json(cached);
+
   const prompt = buildPrompt(tema, nivel, tipo, idioma || "es", personas);
 
   try {
     const text = await generateText(prompt);
     const secciones = parseSections(text);
-    res.json({ secciones, textoCompleto: text });
+    const result = { secciones, textoCompleto: text };
+    setCache(cacheKey, result);
+    res.json(result);
   } catch (err) {
     console.error("Error AI:", err.message);
     res.status(500).json({ error: "Error al generar la tarea. Intenta de nuevo." });
@@ -199,7 +249,6 @@ Responde SOLO con el JSON, sin texto adicional. El formato debe ser:
 
   try {
     const text = await generateText(prompt);
-    // Extract JSON from response
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
       const quiz = JSON.parse(jsonMatch[0]);
@@ -249,7 +298,6 @@ app.post("/api/compartir", (req, res) => {
   const { tema, tipo, nivel, secciones, textoCompleto } = req.body;
   const id = randomBytes(4).toString("hex");
   sharedTasks.set(id, { tema, tipo, nivel, secciones, textoCompleto, createdAt: Date.now() });
-  // Clean old entries (older than 24h)
   for (const [key, val] of sharedTasks) {
     if (Date.now() - val.createdAt > 86400000) sharedTasks.delete(key);
   }

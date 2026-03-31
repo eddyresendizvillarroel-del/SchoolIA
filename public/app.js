@@ -1,4 +1,4 @@
-const { createApp, ref, computed, reactive, onMounted, watch } = Vue;
+const { createApp, ref, computed, reactive, onMounted, watch, nextTick } = Vue;
 
 // ── Traducciones ─────────────────────────────────────────────────
 const i18n = {
@@ -34,7 +34,7 @@ const i18n = {
     tabSummary: "Resumen", tabExplanation: "Explicación",
     tabPresentation: "Exposición", tabVisualIdeas: "Ideas Visuales",
     tabQA: "Preguntas y Respuestas", tabBibliography: "Bibliografía",
-    expand: "Ampliar",
+    expand: "Ampliar esta sección",
     chat: "Chat", quiz: "Quiz", flashcards: "Flashcards",
     grader: "Calificador", share: "Compartir", timer: "Pomodoro",
     chatPlaceholder: "Pregunta algo sobre el tema...",
@@ -102,7 +102,7 @@ const i18n = {
     tabSummary: "Summary", tabExplanation: "Explanation",
     tabPresentation: "Presentation", tabVisualIdeas: "Visual Ideas",
     tabQA: "Questions & Answers", tabBibliography: "Bibliography",
-    expand: "Expand",
+    expand: "Expand this section",
     chat: "Chat", quiz: "Quiz", flashcards: "Flashcards",
     grader: "Grader", share: "Share", timer: "Pomodoro",
     chatPlaceholder: "Ask something about the topic...",
@@ -340,10 +340,11 @@ createApp({
     const isStreaming = ref(false);
 
     // Tools state
-    const activePanel = ref(""); // chat, quiz, flashcards, grader, share, timer
+    const activePanel = ref("");
     const chatMessages = ref([]);
     const chatInput = ref("");
     const chatLoading = ref(false);
+    const chatContainer = ref(null);
     const quizData = ref(null);
     const quizAnswers = reactive({});
     const quizChecked = ref(false);
@@ -364,6 +365,7 @@ createApp({
     const pomodoroTime = ref(25 * 60);
     const pomodoroRunning = ref(false);
     const pomodoroIsBreak = ref(false);
+    const pomodoroTotal = ref(25 * 60);
     let pomodoroInterval = null;
 
     // ── Traducción ─────────────────────────────────────────────────
@@ -414,6 +416,11 @@ createApp({
       return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
     });
 
+    const pomodoroProgress = computed(() => {
+      if (pomodoroTotal.value === 0) return 0;
+      return ((pomodoroTotal.value - pomodoroTime.value) / pomodoroTotal.value) * 100;
+    });
+
     // ── Helpers ────────────────────────────────────────────────────
     function countWords(text) {
       if (!text) return 0;
@@ -432,7 +439,22 @@ createApp({
 
     function renderMarkdown(text) {
       if (!text) return '<p class="empty-section">—</p>';
-      return marked.parse(text);
+      const raw = marked.parse(text);
+      return DOMPurify.sanitize(raw);
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function scrollChatToBottom() {
+      nextTick(() => {
+        if (chatContainer.value) {
+          chatContainer.value.scrollTop = chatContainer.value.scrollHeight;
+        }
+      });
     }
 
     function playNotificationSound() {
@@ -527,19 +549,20 @@ createApp({
     }
 
     function buildExportHTML() {
-      let html = `<html><head><meta charset="UTF-8"><title>${form.tema}</title>
+      const sanitize = (str) => DOMPurify.sanitize(marked.parse(str));
+      let html = `<html><head><meta charset="UTF-8"><title>${escapeHtml(form.tema)}</title>
         <style>body{font-family:Arial,sans-serif;padding:40px;color:#222;line-height:1.8;}
         h1{color:#10a37f;border-bottom:2px solid #10a37f;padding-bottom:8px;}
         h2{color:#333;margin-top:28px;}ul,ol{margin-left:20px;}
         .meta{color:#666;font-size:14px;margin-bottom:24px;}
         .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;margin-right:6px;background:#e0f5ee;color:#10a37f;}
         </style></head><body>`;
-      html += `<h1>${form.tema}</h1>`;
-      html += `<div class="meta"><span class="badge">${tipoLabel.value}</span><span class="badge">${nivelLabel.value}</span><span class="badge">${wordCount.value} ${t("words")}</span></div>`;
+      html += `<h1>${escapeHtml(form.tema)}</h1>`;
+      html += `<div class="meta"><span class="badge">${escapeHtml(tipoLabel.value)}</span><span class="badge">${escapeHtml(nivelLabel.value)}</span><span class="badge">${wordCount.value} ${t("words")}</span></div>`;
       for (const tab of tabs.value) {
         if (secciones[tab.key]) {
-          html += `<h2>${tab.icon} ${tab.label}</h2>`;
-          html += marked.parse(secciones[tab.key]);
+          html += `<h2>${tab.icon} ${escapeHtml(tab.label)}</h2>`;
+          html += sanitize(secciones[tab.key]);
         }
       }
       html += `<hr><p style="color:#999;font-size:12px;text-align:center;">Generado con SchoolIA</p></body></html>`;
@@ -555,7 +578,6 @@ createApp({
       error.value = "";
       activeTab.value = "resumen";
       sidebarOpen.value = false;
-      // Reset sections
       Object.keys(secciones).forEach(k => secciones[k] = "");
 
       try {
@@ -570,6 +592,14 @@ createApp({
             personas: form.personas || null,
           }),
         });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          showError(errData.error || "Error del servidor. Intenta de nuevo.");
+          loading.value = false;
+          isStreaming.value = false;
+          return;
+        }
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
@@ -604,7 +634,7 @@ createApp({
           }
         }
       } catch {
-        showError("Error de conexión.");
+        showError("Error de conexión. Verifica tu internet e intenta de nuevo.");
       } finally {
         loading.value = false;
         isStreaming.value = false;
@@ -670,6 +700,7 @@ createApp({
       chatMessages.value.push({ role: "user", text: pregunta });
       chatInput.value = "";
       chatLoading.value = true;
+      scrollChatToBottom();
       try {
         const res = await fetch("/api/chat", {
           method: "POST",
@@ -679,6 +710,7 @@ createApp({
         const data = await res.json();
         if (data.error) { showError(data.error); return; }
         chatMessages.value.push({ role: "ai", text: data.respuesta });
+        scrollChatToBottom();
       } catch { showError("Error de conexión."); }
       finally { chatLoading.value = false; }
     }
@@ -805,9 +837,11 @@ createApp({
           if (!pomodoroIsBreak.value) {
             pomodoroIsBreak.value = true;
             pomodoroTime.value = 5 * 60;
+            pomodoroTotal.value = 5 * 60;
           } else {
             pomodoroIsBreak.value = false;
             pomodoroTime.value = 25 * 60;
+            pomodoroTotal.value = 25 * 60;
           }
         }
       }, 1000);
@@ -818,6 +852,7 @@ createApp({
       pomodoroRunning.value = false;
       pomodoroIsBreak.value = false;
       pomodoroTime.value = 25 * 60;
+      pomodoroTotal.value = 25 * 60;
     }
 
     function togglePanel(panel) {
@@ -836,6 +871,14 @@ createApp({
         copiado.value = true;
         setTimeout(() => (copiado.value = false), 2000);
       } catch { showError("No se pudo copiar."); }
+    }
+
+    // ── Keyboard shortcuts ─────────────────────────────────────────
+    function handleKeyboard(e) {
+      if (e.ctrlKey && e.key === "Enter") {
+        e.preventDefault();
+        if (!loading.value && form.tema.trim()) generar();
+      }
     }
 
     // ── Load shared task from URL ──────────────────────────────────
@@ -869,6 +912,7 @@ createApp({
       const savedLang = localStorage.getItem("schoolia-lang");
       if (savedLang) form.idioma = savedLang;
       loadSharedTask();
+      document.addEventListener("keydown", handleKeyboard);
     });
 
     watch(() => form.idioma, (val) => {
@@ -879,13 +923,13 @@ createApp({
       form, secciones, textoCompleto, loading, error,
       activeTab, copiado, sidebarOpen, hasResult, darkMode, historial,
       tabs, tipoLabel, nivelLabel, wordCount, streamingText, isStreaming,
-      activePanel, chatMessages, chatInput, chatLoading,
+      activePanel, chatMessages, chatInput, chatLoading, chatContainer,
       quizData, quizAnswers, quizChecked, quizLoading, quizScore,
       flashcardsData, flashcardIndex, flashcardFlipped, flashcardsLoading,
       graderQuestion, graderAnswer, graderResult, graderLoading,
       shareLink, shareLoading, expandLoading,
-      pomodoroTime, pomodoroRunning, pomodoroIsBreak, pomodoroDisplay,
-      t, generar, humanizar, acortar, copiarTodo, renderMarkdown,
+      pomodoroTime, pomodoroRunning, pomodoroIsBreak, pomodoroDisplay, pomodoroProgress,
+      t, generar, humanizar, acortar, copiarTodo, renderMarkdown, escapeHtml,
       toggleTheme, cargarHistorial, limpiarHistorial,
       exportarPDF, exportarWord, countWords, ampliarSeccion,
       enviarChat, generarQuiz, verificarQuiz,

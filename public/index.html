@@ -3,16 +3,32 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SchoolIA - Genera Tareas con IA</title>
+  <title>SchoolIA - Genera Tareas Escolares con Inteligencia Artificial</title>
+  <meta name="description" content="SchoolIA genera tareas, resúmenes, ensayos, mapas conceptuales y más con inteligencia artificial. Herramientas de estudio: quiz, flashcards, calificador y chat educativo.">
+  <meta name="keywords" content="tareas escolares, inteligencia artificial, generador de tareas, resúmenes, ensayos, flashcards, quiz educativo">
+  <meta name="author" content="SchoolIA">
+  <meta name="theme-color" content="#10a37f">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="SchoolIA - Genera Tareas Escolares con IA">
+  <meta property="og:description" content="Genera tareas, resúmenes, ensayos y más al instante. Incluye quiz, flashcards, calificador y chat educativo.">
+  <meta property="og:site_name" content="SchoolIA">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="SchoolIA - Genera Tareas Escolares con IA">
+  <meta name="twitter:description" content="Genera tareas, resúmenes, ensayos y más al instante con inteligencia artificial.">
+
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
   <link rel="stylesheet" href="style.css">
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked@4/marked.min.js"></script>
-  <script>window.onerror=function(m,s,l,c,e){document.body.innerHTML='<pre style="color:red;padding:20px;">ERROR: '+m+'\nLine: '+l+'\n'+((e&&e.stack)||'')+'</pre>';}</script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
 </head>
 <body>
-  <div id="app">
-    <button class="mobile-toggle" @click="sidebarOpen = !sidebarOpen">
+  <div id="app" v-cloak>
+    <button class="mobile-toggle" @click="sidebarOpen = !sidebarOpen" aria-label="Abrir menú">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
       </svg>
@@ -26,7 +42,7 @@
             <span class="logo-text">School<span>IA</span></span>
           </div>
           <div class="top-controls">
-            <button class="icon-btn" @click="toggleTheme" :title="darkMode ? t('easy') : t('hard')">
+            <button class="icon-btn" @click="toggleTheme" :title="darkMode ? 'Modo claro' : 'Modo oscuro'" aria-label="Cambiar tema">
               <svg v-if="darkMode" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
               </svg>
@@ -42,7 +58,7 @@
 
           <div class="field">
             <label for="tema">{{ t('topic') }}</label>
-            <input id="tema" v-model="form.tema" type="text" :placeholder="t('topicPlaceholder')" required @keydown.enter.prevent="generar">
+            <input id="tema" v-model="form.tema" type="text" :placeholder="t('topicPlaceholder')" required @keydown.ctrl.enter.prevent="generar">
           </div>
 
           <div class="field">
@@ -89,6 +105,7 @@
             <span v-if="loading" class="spinner-sm"></span>
             <span class="btn-generar-text">{{ loading ? t('generating') : t('generate') }}</span>
           </button>
+          <span class="shortcut-hint">Ctrl + Enter</span>
         </form>
 
         <div v-if="historial.length > 0" class="historial">
@@ -105,7 +122,10 @@
         <div class="sidebar-footer">{{ t('poweredBy') }}</div>
       </aside>
 
-      <main class="main-content">
+      <!-- Overlay for mobile sidebar -->
+      <div class="sidebar-overlay" :class="{ visible: sidebarOpen }" @click="sidebarOpen = false"></div>
+
+      <main class="main-content" @keydown.ctrl.enter.prevent="generar">
         <!-- Empty State -->
         <div v-if="!hasResult && !loading" class="empty-state">
           <div class="empty-icon">
@@ -115,26 +135,46 @@
               <line x1="12" y1="6" x2="12" y2="12"/><line x1="9" y1="9" x2="15" y2="9"/>
             </svg>
           </div>
-          <h1>{{ t('welcome') }}</h1>
-          <p>{{ t('welcomeDesc') }}</p>
+          <h1 class="hero-title">{{ t('welcome') }}</h1>
+          <p class="hero-desc">{{ t('welcomeDesc') }}</p>
           <div class="features">
-            <div class="feature"><span class="feature-icon">📝</span><span>{{ t('summaryExpl') }}</span></div>
-            <div class="feature"><span class="feature-icon">🎤</span><span>{{ t('readyPresent') }}</span></div>
-            <div class="feature"><span class="feature-icon">💡</span><span>{{ t('visualIdeas') }}</span></div>
-            <div class="feature"><span class="feature-icon">❓</span><span>{{ t('qAndA') }}</span></div>
-            <div class="feature"><span class="feature-icon">📄</span><span>{{ t('exportPdf') }}</span></div>
-            <div class="feature"><span class="feature-icon">🌍</span><span>{{ t('multiLang') }}</span></div>
+            <div class="feature" style="animation-delay: 0.1s"><span class="feature-icon">📝</span><span>{{ t('summaryExpl') }}</span></div>
+            <div class="feature" style="animation-delay: 0.2s"><span class="feature-icon">🎤</span><span>{{ t('readyPresent') }}</span></div>
+            <div class="feature" style="animation-delay: 0.3s"><span class="feature-icon">💡</span><span>{{ t('visualIdeas') }}</span></div>
+            <div class="feature" style="animation-delay: 0.4s"><span class="feature-icon">❓</span><span>{{ t('qAndA') }}</span></div>
+            <div class="feature" style="animation-delay: 0.5s"><span class="feature-icon">📄</span><span>{{ t('exportPdf') }}</span></div>
+            <div class="feature" style="animation-delay: 0.6s"><span class="feature-icon">🌍</span><span>{{ t('multiLang') }}</span></div>
           </div>
         </div>
 
-        <!-- Loading State -->
+        <!-- Loading State (skeleton) -->
         <div v-if="loading && !hasResult && !isStreaming" class="loading-state">
-          <div class="spinner-lg"></div>
-          <p class="loading-text">{{ t('generatingAbout') }} <strong>{{ form.tema }}</strong></p>
-          <div class="loading-steps">
-            <div class="loading-step"><span class="loading-step-dot"></span>{{ t('analyzing') }}</div>
-            <div class="loading-step"><span class="loading-step-dot"></span>{{ t('creating') }}</div>
-            <div class="loading-step"><span class="loading-step-dot"></span>{{ t('preparing') }}</div>
+          <div class="skeleton-container">
+            <div class="skeleton-header">
+              <div class="skeleton-line skeleton-title"></div>
+              <div class="skeleton-badges">
+                <div class="skeleton-badge"></div>
+                <div class="skeleton-badge"></div>
+              </div>
+            </div>
+            <div class="skeleton-tabs">
+              <div class="skeleton-tab" v-for="n in 6" :key="n"></div>
+            </div>
+            <div class="skeleton-body">
+              <div class="skeleton-line" style="width: 100%"></div>
+              <div class="skeleton-line" style="width: 92%"></div>
+              <div class="skeleton-line" style="width: 85%"></div>
+              <div class="skeleton-line" style="width: 96%"></div>
+              <div class="skeleton-line" style="width: 78%"></div>
+              <div class="skeleton-line" style="width: 88%"></div>
+              <div class="skeleton-line" style="width: 60%"></div>
+            </div>
+            <p class="loading-text">{{ t('generatingAbout') }} <strong>{{ form.tema }}</strong></p>
+            <div class="loading-steps">
+              <div class="loading-step"><span class="loading-step-dot"></span>{{ t('analyzing') }}</div>
+              <div class="loading-step"><span class="loading-step-dot"></span>{{ t('creating') }}</div>
+              <div class="loading-step"><span class="loading-step-dot"></span>{{ t('preparing') }}</div>
+            </div>
           </div>
         </div>
 
@@ -169,25 +209,25 @@
               </div>
             </div>
             <div class="action-buttons">
-              <button class="btn-action" @click="humanizar" :disabled="loading">
+              <button class="btn-action" @click="humanizar" :disabled="loading" :title="t('humanize')">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                {{ t('humanize') }}
+                <span class="btn-label">{{ t('humanize') }}</span>
               </button>
-              <button class="btn-action" @click="acortar" :disabled="loading">
+              <button class="btn-action" @click="acortar" :disabled="loading" :title="t('shorten')">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-                {{ t('shorten') }}
+                <span class="btn-label">{{ t('shorten') }}</span>
               </button>
-              <button class="btn-action btn-copy" @click="copiarTodo">
+              <button class="btn-action btn-copy" @click="copiarTodo" :title="t('copyAll')">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                {{ copiado ? t('copied') : t('copyAll') }}
+                <span class="btn-label">{{ copiado ? t('copied') : t('copyAll') }}</span>
               </button>
-              <button class="btn-action btn-export" @click="exportarPDF" :disabled="loading">
+              <button class="btn-action btn-export" @click="exportarPDF" :disabled="loading" title="PDF">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
-                PDF
+                <span class="btn-label">PDF</span>
               </button>
-              <button class="btn-action btn-export" @click="exportarWord" :disabled="loading">
+              <button class="btn-action btn-export" @click="exportarWord" :disabled="loading" title="Word">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                Word
+                <span class="btn-label">Word</span>
               </button>
             </div>
           </div>
@@ -199,34 +239,63 @@
 
           <!-- Tool buttons -->
           <div class="tool-buttons">
-            <button class="tool-btn" :class="{ active: activePanel === 'chat' }" @click="togglePanel('chat')">💬 {{ t('chat') }}</button>
-            <button class="tool-btn" :class="{ active: activePanel === 'quiz' }" @click="togglePanel('quiz')">🧠 {{ t('quiz') }}</button>
-            <button class="tool-btn" :class="{ active: activePanel === 'flashcards' }" @click="togglePanel('flashcards')">🃏 {{ t('flashcards') }}</button>
-            <button class="tool-btn" :class="{ active: activePanel === 'grader' }" @click="togglePanel('grader')">✅ {{ t('grader') }}</button>
-            <button class="tool-btn" :class="{ active: activePanel === 'share' }" @click="togglePanel('share')">🔗 {{ t('share') }}</button>
-            <button class="tool-btn" :class="{ active: activePanel === 'timer' }" @click="togglePanel('timer')">⏱️ {{ t('timer') }}</button>
+            <button class="tool-btn" :class="{ active: activePanel === 'chat' }" @click="togglePanel('chat')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              {{ t('chat') }}
+            </button>
+            <button class="tool-btn" :class="{ active: activePanel === 'quiz' }" @click="togglePanel('quiz')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              {{ t('quiz') }}
+            </button>
+            <button class="tool-btn" :class="{ active: activePanel === 'flashcards' }" @click="togglePanel('flashcards')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+              {{ t('flashcards') }}
+            </button>
+            <button class="tool-btn" :class="{ active: activePanel === 'grader' }" @click="togglePanel('grader')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              {{ t('grader') }}
+            </button>
+            <button class="tool-btn" :class="{ active: activePanel === 'share' }" @click="togglePanel('share')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              {{ t('share') }}
+            </button>
+            <button class="tool-btn" :class="{ active: activePanel === 'timer' }" @click="togglePanel('timer')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              {{ t('timer') }}
+            </button>
           </div>
 
-          <!-- ── Chat Panel ─────────────────────────────────── -->
+          <!-- Chat Panel -->
           <div v-if="activePanel === 'chat'" class="tool-panel">
-            <div class="chat-messages">
+            <div class="chat-messages" ref="chatContainer">
+              <div v-if="chatMessages.length === 0" class="chat-empty">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.3">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                <p>{{ t('chatPlaceholder') }}</p>
+              </div>
               <div v-for="(msg, i) in chatMessages" :key="i" class="chat-msg" :class="msg.role">
-                <div class="chat-bubble" v-html="msg.role === 'ai' ? renderMarkdown(msg.text) : msg.text"></div>
+                <div class="chat-bubble" v-html="msg.role === 'ai' ? renderMarkdown(msg.text) : escapeHtml(msg.text)"></div>
               </div>
               <div v-if="chatLoading" class="chat-msg ai">
-                <div class="chat-bubble"><div class="spinner-sm"></div> {{ t('loadingChat') }}</div>
+                <div class="chat-bubble"><div class="typing-indicator"><span></span><span></span><span></span></div></div>
               </div>
             </div>
             <form class="chat-input-area" @submit.prevent="enviarChat">
-              <input v-model="chatInput" :placeholder="t('chatPlaceholder')" :disabled="chatLoading">
-              <button type="submit" :disabled="chatLoading || !chatInput.trim()">{{ t('send') }}</button>
+              <input v-model="chatInput" :placeholder="t('chatPlaceholder')" :disabled="chatLoading" @keydown.enter.exact.prevent="enviarChat">
+              <button type="submit" :disabled="chatLoading || !chatInput.trim()" aria-label="Enviar">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
             </form>
           </div>
 
-          <!-- ── Quiz Panel ─────────────────────────────────── -->
+          <!-- Quiz Panel -->
           <div v-if="activePanel === 'quiz'" class="tool-panel">
-            <button v-if="!quizData && !quizLoading" class="btn-generar" @click="generarQuiz" style="margin-bottom:16px">🧠 {{ t('quiz') }}</button>
-            <div v-if="quizLoading" class="panel-loading"><div class="spinner-sm"></div> {{ t('loadingQuiz') }}</div>
+            <button v-if="!quizData && !quizLoading" class="btn-generar" @click="generarQuiz" style="margin-bottom:16px">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              {{ t('quiz') }}
+            </button>
+            <div v-if="quizLoading" class="panel-loading"><div class="typing-indicator"><span></span><span></span><span></span></div> {{ t('loadingQuiz') }}</div>
             <div v-if="quizData" class="quiz-container">
               <h3>{{ t('quizTitle') }}</h3>
               <div v-for="(q, qi) in quizData" :key="qi" class="quiz-question">
@@ -250,10 +319,13 @@
             </div>
           </div>
 
-          <!-- ── Flashcards Panel ───────────────────────────── -->
+          <!-- Flashcards Panel -->
           <div v-if="activePanel === 'flashcards'" class="tool-panel">
-            <button v-if="!flashcardsData && !flashcardsLoading" class="btn-generar" @click="generarFlashcards" style="margin-bottom:16px">🃏 {{ t('flashcards') }}</button>
-            <div v-if="flashcardsLoading" class="panel-loading"><div class="spinner-sm"></div> {{ t('loadingFlashcards') }}</div>
+            <button v-if="!flashcardsData && !flashcardsLoading" class="btn-generar" @click="generarFlashcards" style="margin-bottom:16px">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+              {{ t('flashcards') }}
+            </button>
+            <div v-if="flashcardsLoading" class="panel-loading"><div class="typing-indicator"><span></span><span></span><span></span></div> {{ t('loadingFlashcards') }}</div>
             <div v-if="flashcardsData" class="flashcard-container">
               <h3>{{ t('flashcardsTitle') }}</h3>
               <div class="flashcard" :class="{ flipped: flashcardFlipped }" @click="flipFlashcard">
@@ -275,7 +347,7 @@
             </div>
           </div>
 
-          <!-- ── Grader Panel ───────────────────────────────── -->
+          <!-- Grader Panel -->
           <div v-if="activePanel === 'grader'" class="tool-panel">
             <h3>{{ t('graderTitle') }}</h3>
             <div class="field" style="margin-bottom:12px">
@@ -304,7 +376,7 @@
             </div>
           </div>
 
-          <!-- ── Share Panel ────────────────────────────────── -->
+          <!-- Share Panel -->
           <div v-if="activePanel === 'share'" class="tool-panel">
             <h3>{{ t('shareTitle') }}</h3>
             <p style="color:var(--text-secondary);font-size:14px;margin-bottom:16px">{{ t('shareDesc') }}</p>
@@ -318,11 +390,14 @@
             </div>
           </div>
 
-          <!-- ── Pomodoro Panel ─────────────────────────────── -->
+          <!-- Pomodoro Panel -->
           <div v-if="activePanel === 'timer'" class="tool-panel">
             <div class="pomodoro">
               <div class="pomodoro-label">{{ pomodoroIsBreak ? t('timerBreak') : t('timerWork') }}</div>
               <div class="pomodoro-time">{{ pomodoroDisplay }}</div>
+              <div class="pomodoro-progress">
+                <div class="pomodoro-progress-bar" :style="{ width: pomodoroProgress + '%' }"></div>
+              </div>
               <div class="pomodoro-controls">
                 <button @click="startPomodoro">{{ pomodoroRunning ? t('timerPause') : t('timerStart') }}</button>
                 <button @click="resetPomodoro">{{ t('timerReset') }}</button>
@@ -341,7 +416,7 @@
           <div class="section-tabs">
             <button v-for="tab in tabs" :key="tab.key" class="tab-btn" :class="{ active: activeTab === tab.key }" @click="activeTab = tab.key">
               <span class="tab-icon">{{ tab.icon }}</span>
-              {{ tab.label }}
+              <span class="tab-label">{{ tab.label }}</span>
             </button>
           </div>
 
