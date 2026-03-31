@@ -58,6 +58,19 @@ const i18n = {
     examResults: "Resultados del examen", examRetry: "Intentar de nuevo",
     loadingExam: "Generando examen...",
     shortcuts: "Atajos de teclado", closePanel: "Cerrar panel", navTabs: "Navegar secciones", close: "Cerrar",
+    originality: "Originalidad", originalityTitle: "Detector de Originalidad",
+    originalityDesc: "Analiza qué tan humano suena tu texto y recibe sugerencias para mejorarlo.",
+    originalityAnalyze: "Analizar texto", loadingOriginality: "Analizando...",
+    originalityScore: "Puntuación", originalityHuman: "humano",
+    originalityAI: "Patrones de IA detectados", originalitySuggestions: "Sugerencias",
+    images: "Imágenes", imagesTitle: "Imágenes de referencia",
+    imagesSearch: "Buscar imágenes...", loadingImages: "Buscando...", imagesNone: "No se encontraron imágenes.",
+    collab: "Colaborar", collabTitle: "Colaboración en tiempo real",
+    collabDesc: "Crea una sala para trabajar con otros en la misma tarea. Comparte el código de sala.",
+    collabCreate: "Crear sala", collabJoin: "Unirse",
+    collabJoinLabel: "Unirse a una sala", collabCodePlaceholder: "Código de sala",
+    collabRoom: "Sala", collabConnected: "conectados", collabLeave: "Salir",
+    collabNotePlaceholder: "Escribe una nota para el equipo...",
   },
   en: {
     generateTask: "Generate your task", topic: "Topic", topicPlaceholder: "E.g.: The French Revolution",
@@ -115,6 +128,19 @@ const i18n = {
     examResults: "Exam Results", examRetry: "Try again",
     loadingExam: "Generating exam...",
     shortcuts: "Keyboard shortcuts", closePanel: "Close panel", navTabs: "Navigate sections", close: "Close",
+    originality: "Originality", originalityTitle: "Originality Detector",
+    originalityDesc: "Analyze how human your text sounds and get suggestions to improve it.",
+    originalityAnalyze: "Analyze text", loadingOriginality: "Analyzing...",
+    originalityScore: "Score", originalityHuman: "human",
+    originalityAI: "AI patterns detected", originalitySuggestions: "Suggestions",
+    images: "Images", imagesTitle: "Reference Images",
+    imagesSearch: "Search images...", loadingImages: "Searching...", imagesNone: "No images found.",
+    collab: "Collaborate", collabTitle: "Real-time Collaboration",
+    collabDesc: "Create a room to work with others on the same task. Share the room code.",
+    collabCreate: "Create room", collabJoin: "Join",
+    collabJoinLabel: "Join a room", collabCodePlaceholder: "Room code",
+    collabRoom: "Room", collabConnected: "connected", collabLeave: "Leave",
+    collabNotePlaceholder: "Write a note for the team...",
   },
   fr: {
     generateTask: "Génère ton devoir", topic: "Sujet", topicPlaceholder: "Ex: La Révolution Française",
@@ -157,6 +183,13 @@ const i18n = {
     examGenerate: "Générer", examSubmit: "Soumettre", examResults: "Résultats", examRetry: "Réessayer",
     loadingExam: "Génération...",
     shortcuts: "Raccourcis clavier", closePanel: "Fermer", navTabs: "Naviguer", close: "Fermer",
+    originality: "Originalité", originalityTitle: "Détecteur d'originalité",
+    originalityDesc: "Analysez si votre texte sonne humain.", originalityAnalyze: "Analyser", loadingOriginality: "Analyse...",
+    originalityScore: "Score", originalityHuman: "humain", originalityAI: "Patterns IA", originalitySuggestions: "Suggestions",
+    images: "Images", imagesTitle: "Images de référence", imagesSearch: "Chercher...", loadingImages: "Recherche...", imagesNone: "Aucune image.",
+    collab: "Collaborer", collabTitle: "Collaboration en temps réel", collabDesc: "Créez une salle pour travailler ensemble.",
+    collabCreate: "Créer", collabJoin: "Rejoindre", collabJoinLabel: "Rejoindre une salle", collabCodePlaceholder: "Code",
+    collabRoom: "Salle", collabConnected: "connectés", collabLeave: "Quitter", collabNotePlaceholder: "Note pour l'équipe...",
   },
   pt: {
     generateTask: "Gere sua tarefa", topic: "Tema", topicPlaceholder: "Ex: A Revolução Francesa",
@@ -199,6 +232,13 @@ const i18n = {
     examGenerate: "Gerar", examSubmit: "Entregar", examResults: "Resultados", examRetry: "Tentar novamente",
     loadingExam: "Gerando...",
     shortcuts: "Atalhos", closePanel: "Fechar painel", navTabs: "Navegar", close: "Fechar",
+    originality: "Originalidade", originalityTitle: "Detector de Originalidade",
+    originalityDesc: "Analise se seu texto soa humano.", originalityAnalyze: "Analisar", loadingOriginality: "Analisando...",
+    originalityScore: "Pontuação", originalityHuman: "humano", originalityAI: "Padrões de IA", originalitySuggestions: "Sugestões",
+    images: "Imagens", imagesTitle: "Imagens de referência", imagesSearch: "Buscar...", loadingImages: "Buscando...", imagesNone: "Nenhuma imagem.",
+    collab: "Colaborar", collabTitle: "Colaboração em tempo real", collabDesc: "Crie uma sala para trabalhar juntos.",
+    collabCreate: "Criar sala", collabJoin: "Entrar", collabJoinLabel: "Entrar em uma sala", collabCodePlaceholder: "Código",
+    collabRoom: "Sala", collabConnected: "conectados", collabLeave: "Sair", collabNotePlaceholder: "Nota para o time...",
   },
   de: {
     generateTask: "Aufgabe erstellen", topic: "Thema", topicPlaceholder: "Z.B.: Die Französische Revolution",
@@ -241,6 +281,13 @@ const i18n = {
     examGenerate: "Erstellen", examSubmit: "Abgeben", examResults: "Ergebnisse", examRetry: "Nochmal",
     loadingExam: "Erstelle...",
     shortcuts: "Tastenkürzel", closePanel: "Panel schließen", navTabs: "Navigieren", close: "Schließen",
+    originality: "Originalität", originalityTitle: "Originalitätsdetektor",
+    originalityDesc: "Analysieren Sie, ob Ihr Text menschlich klingt.", originalityAnalyze: "Analysieren", loadingOriginality: "Analyse...",
+    originalityScore: "Punktzahl", originalityHuman: "menschlich", originalityAI: "KI-Muster", originalitySuggestions: "Vorschläge",
+    images: "Bilder", imagesTitle: "Referenzbilder", imagesSearch: "Suchen...", loadingImages: "Suche...", imagesNone: "Keine Bilder.",
+    collab: "Zusammenarbeiten", collabTitle: "Echtzeit-Zusammenarbeit", collabDesc: "Erstellen Sie einen Raum.",
+    collabCreate: "Raum erstellen", collabJoin: "Beitreten", collabJoinLabel: "Einem Raum beitreten", collabCodePlaceholder: "Code",
+    collabRoom: "Raum", collabConnected: "verbunden", collabLeave: "Verlassen", collabNotePlaceholder: "Notiz für das Team...",
   },
 };
 
@@ -302,6 +349,24 @@ createApp({
     const examTimeRunning = ref(false);
     const examTimeLeft = ref(0);
     let examInterval = null;
+
+    // Originality
+    const originalityResult = ref(null);
+    const originalityLoading = ref(false);
+
+    // Images
+    const imageQuery = ref("");
+    const imagesData = ref(null);
+    const imagesLoading = ref(false);
+
+    // Collaboration
+    const collabRoom = ref("");
+    const collabUserCount = ref(0);
+    const collabNotes = ref([]);
+    const collabNoteInput = ref("");
+    const collabJoinCode = ref("");
+    const collabNotesContainer = ref(null);
+    let socket = null;
 
     // Version history
     const versionHistory = ref([]);
@@ -598,7 +663,7 @@ show();
               try {
                 const data = JSON.parse(line.slice(6));
                 if (data.chunk) { streamingText.value += data.chunk; secciones.resumen = streamingText.value; }
-                if (data.done) { updateSections(data); guardarHistorial(); playNotificationSound(); saveVersion(t("vOriginal")); }
+                if (data.done) { updateSections(data); guardarHistorial(); playNotificationSound(); saveVersion(t("vOriginal")); broadcastContent(); }
                 if (data.error) showError(data.error);
               } catch {}
             }
@@ -613,7 +678,7 @@ show();
       try {
         const res = await fetch("/api/humanizar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ texto: textoCompleto.value }) });
         const data = await res.json(); if (data.error) { showError(data.error); return; }
-        updateSections(data); playNotificationSound(); saveVersion(t("vHumanized"));
+        updateSections(data); playNotificationSound(); saveVersion(t("vHumanized")); broadcastContent();
       } catch { showError("Error de conexión."); } finally { loading.value = false; }
     }
 
@@ -622,7 +687,7 @@ show();
       try {
         const res = await fetch("/api/acortar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ texto: textoCompleto.value }) });
         const data = await res.json(); if (data.error) { showError(data.error); return; }
-        updateSections(data); playNotificationSound(); saveVersion(t("vShortened"));
+        updateSections(data); playNotificationSound(); saveVersion(t("vShortened")); broadcastContent();
       } catch { showError("Error de conexión."); } finally { loading.value = false; }
     }
 
@@ -725,6 +790,85 @@ show();
       } catch { showError("Error de conexión."); } finally { shareLoading.value = false; }
     }
 
+    // ── Originality ─────────────────────────────────────────────────
+    async function analizarOriginalidad() {
+      if (!textoCompleto.value) return; originalityLoading.value = true; originalityResult.value = null;
+      try {
+        const res = await fetch("/api/originalidad", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ texto: textoCompleto.value }) });
+        const data = await res.json(); if (data.error) { showError(data.error); return; }
+        originalityResult.value = data;
+      } catch { showError("Error de conexión."); } finally { originalityLoading.value = false; }
+    }
+
+    // ── Images ────────────────────────────────────────────────────────
+    async function buscarImagenes() {
+      const q = imageQuery.value.trim() || form.tema;
+      if (!q) return; imagesLoading.value = true; imagesData.value = null;
+      try {
+        const res = await fetch(`/api/imagenes?q=${encodeURIComponent(q)}`);
+        const data = await res.json(); if (data.error) { showError(data.error); return; }
+        imagesData.value = data.images;
+      } catch { showError("Error de conexión."); } finally { imagesLoading.value = false; }
+    }
+
+    // ── Collaboration ─────────────────────────────────────────────────
+    function initSocket() {
+      if (socket) return;
+      socket = io();
+      socket.on("room-created", (data) => { collabRoom.value = data.roomId; collabUserCount.value = 1; });
+      socket.on("room-joined", (data) => {
+        collabRoom.value = data.roomId; collabUserCount.value = data.userCount;
+        collabNotes.value = data.notes || [];
+        if (data.secciones && Object.values(data.secciones).some(v => v)) {
+          Object.assign(secciones, data.secciones); textoCompleto.value = data.textoCompleto;
+          form.tema = data.tema || form.tema;
+        }
+      });
+      socket.on("room-error", (msg) => { showError(msg); });
+      socket.on("user-count", (count) => { collabUserCount.value = count; });
+      socket.on("content-updated", (data) => {
+        Object.assign(secciones, data.secciones); textoCompleto.value = data.textoCompleto;
+        if (data.tema) form.tema = data.tema;
+      });
+      socket.on("new-note", (note) => {
+        collabNotes.value.push(note);
+        nextTick(() => { if (collabNotesContainer.value) collabNotesContainer.value.scrollTop = collabNotesContainer.value.scrollHeight; });
+      });
+    }
+
+    function crearSala() {
+      initSocket();
+      socket.emit("create-room", { tema: form.tema, secciones: { ...secciones }, textoCompleto: textoCompleto.value });
+    }
+
+    function unirseSala() {
+      if (!collabJoinCode.value.trim()) return;
+      initSocket();
+      socket.emit("join-room", collabJoinCode.value.trim());
+    }
+
+    function salirSala() {
+      if (socket) { socket.disconnect(); socket = null; }
+      collabRoom.value = ""; collabUserCount.value = 0; collabNotes.value = [];
+    }
+
+    function enviarNota() {
+      if (!collabNoteInput.value.trim() || !socket) return;
+      socket.emit("send-note", collabNoteInput.value.trim());
+      collabNoteInput.value = "";
+    }
+
+    async function copiarCodigoSala() {
+      try { await navigator.clipboard.writeText(collabRoom.value); } catch {}
+    }
+
+    // Broadcast content changes to room
+    function broadcastContent() {
+      if (socket && collabRoom.value) {
+        socket.emit("update-content", { secciones: { ...secciones }, textoCompleto: textoCompleto.value, tema: form.tema });
+      }
+    }
+
     // ── Pomodoro ───────────────────────────────────────────────────
     function startPomodoro() {
       if (pomodoroRunning.value) { clearInterval(pomodoroInterval); pomodoroRunning.value = false; return; }
@@ -814,6 +958,10 @@ show();
       generarExamen, entregarExamen,
       calificar, compartir, startPomodoro, resetPomodoro, togglePanel,
       speakSection, restoreVersion, launchConfetti,
+      originalityResult, originalityLoading, analizarOriginalidad,
+      imageQuery, imagesData, imagesLoading, buscarImagenes,
+      collabRoom, collabUserCount, collabNotes, collabNoteInput, collabJoinCode, collabNotesContainer,
+      crearSala, unirseSala, salirSala, enviarNota, copiarCodigoSala,
     };
   },
 }).mount("#app");

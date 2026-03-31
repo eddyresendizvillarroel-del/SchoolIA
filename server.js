@@ -3,12 +3,16 @@ import express from "express";
 import Groq from "groq-sdk";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
+import { createServer } from "http";
+import { Server as SocketIO } from "socket.io";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { randomBytes } from "crypto";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
+const httpServer = createServer(app);
+const io = new SocketIO(httpServer);
 
 // ── Middlewares ────────────────────────────────────────────────────
 app.use(compression());
@@ -399,6 +403,156 @@ Responde SOLO con el JSON.`;
   }
 });
 
+// ── Endpoint: Detector de originalidad ─────────────────────────────
+app.post("/api/originalidad", async (req, res) => {
+  const { texto } = req.body;
+  if (!texto) return res.status(400).json({ error: "Falta el texto." });
+
+  const prompt = `Analiza el siguiente texto escolar y evalúa qué tan natural/humano suena vs generado por IA.
+
+Texto:
+${texto.slice(0, 3000)}
+
+Responde SOLO en formato JSON:
+{
+  "puntaje_humano": (0-100, donde 100 = suena completamente humano),
+  "indicadores_ia": ["lista de frases o patrones que suenan artificiales"],
+  "indicadores_humanos": ["lista de elementos que suenan naturales"],
+  "sugerencias": ["cómo hacerlo sonar más natural"],
+  "veredicto": "breve resumen de 1-2 oraciones"
+}`;
+
+  try {
+    const text = await generateText(prompt);
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const result = JSON.parse(jsonMatch[0]);
+      res.json(result);
+    } else {
+      res.status(500).json({ error: "Error al analizar originalidad." });
+    }
+  } catch (err) {
+    console.error("Error AI:", err.message);
+    res.status(500).json({ error: "Error al analizar. Intenta de nuevo." });
+  }
+});
+
+// ── Endpoint: Buscar imágenes (Wikimedia Commons) ──────────────────
+app.get("/api/imagenes", async (req, res) => {
+  const { q } = req.query;
+  if (!q) return res.status(400).json({ error: "Falta el término de búsqueda." });
+
+  try {
+    const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(q)}&gsrlimit=8&gsrnamespace=6&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=400&format=json&origin=*`;
+    const response = await fetch(url);
+    const data = await response.json();
+
+    const images = [];
+    if (data.query && data.query.pages) {
+      for (const page of Object.values(data.query.pages)) {
+        if (page.imageinfo && page.imageinfo[0]) {
+          const info = page.imageinfo[0];
+          const meta = info.extmetadata || {};
+          images.push({
+            thumb: info.thumburl || info.url,
+            full: info.url,
+            title: page.title.replace("File:", "").replace(/\.\w+$/, ""),
+            author: meta.Artist ? meta.Artist.value.replace(/<[^>]*>/g, "") : "Wikimedia Commons",
+            license: meta.LicenseShortName ? meta.LicenseShortName.value : "CC",
+          });
+        }
+      }
+    }
+    res.json({ images });
+  } catch (err) {
+    console.error("Error images:", err.message);
+    res.status(500).json({ error: "Error al buscar imágenes." });
+  }
+});
+
+// ── Socket.io: Colaboración en tiempo real ─────────────────────────
+const collabRooms = new Map();
+
+io.on("connection", (socket) => {
+  let currentRoom = null;
+
+  socket.on("create-room", (data) => {
+    const roomId = randomBytes(3).toString("hex");
+    collabRooms.set(roomId, {
+      host: socket.id,
+      tema: data.tema || "",
+      secciones: data.secciones || {},
+      textoCompleto: data.textoCompleto || "",
+      users: new Set([socket.id]),
+      notes: [],
+      createdAt: Date.now(),
+    });
+    currentRoom = roomId;
+    socket.join(roomId);
+    socket.emit("room-created", { roomId, isHost: true });
+  });
+
+  socket.on("join-room", (roomId) => {
+    const room = collabRooms.get(roomId);
+    if (!room) { socket.emit("room-error", "Sala no encontrada."); return; }
+    currentRoom = roomId;
+    room.users.add(socket.id);
+    socket.join(roomId);
+    socket.emit("room-joined", {
+      roomId,
+      tema: room.tema,
+      secciones: room.secciones,
+      textoCompleto: room.textoCompleto,
+      notes: room.notes,
+      userCount: room.users.size,
+      isHost: false,
+    });
+    io.to(roomId).emit("user-count", room.users.size);
+  });
+
+  socket.on("update-content", (data) => {
+    if (!currentRoom) return;
+    const room = collabRooms.get(currentRoom);
+    if (!room) return;
+    room.secciones = data.secciones;
+    room.textoCompleto = data.textoCompleto;
+    room.tema = data.tema || room.tema;
+    socket.to(currentRoom).emit("content-updated", {
+      secciones: room.secciones,
+      textoCompleto: room.textoCompleto,
+      tema: room.tema,
+    });
+  });
+
+  socket.on("send-note", (text) => {
+    if (!currentRoom) return;
+    const room = collabRooms.get(currentRoom);
+    if (!room) return;
+    const note = { text, id: socket.id.slice(0, 4), timestamp: Date.now() };
+    room.notes.push(note);
+    if (room.notes.length > 50) room.notes.shift();
+    io.to(currentRoom).emit("new-note", note);
+  });
+
+  socket.on("disconnect", () => {
+    if (currentRoom) {
+      const room = collabRooms.get(currentRoom);
+      if (room) {
+        room.users.delete(socket.id);
+        io.to(currentRoom).emit("user-count", room.users.size);
+        if (room.users.size === 0) collabRooms.delete(currentRoom);
+      }
+    }
+  });
+});
+
+// Clean old rooms every hour
+setInterval(() => {
+  for (const [key, room] of collabRooms) {
+    if (Date.now() - room.createdAt > 3600000) collabRooms.delete(key);
+  }
+}, 3600000);
+
 // ── Construir prompt estructurado ──────────────────────────────────
 function buildPrompt(tema, nivel, tipo, idioma, personas) {
   const nivelTexto = { facil: "básico y sencillo", medio: "intermedio con buen detalle", dificil: "avanzado y profundo" };
@@ -493,4 +647,4 @@ function parseSections(text) {
 }
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, "0.0.0.0", () => console.log(`SchoolIA corriendo en http://localhost:${PORT}`));
+httpServer.listen(PORT, "0.0.0.0", () => console.log(`SchoolIA corriendo en http://localhost:${PORT}`));
